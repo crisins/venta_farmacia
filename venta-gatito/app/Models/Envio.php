@@ -16,7 +16,7 @@ class Envio extends Model
         'fecha_entrega',
     ];
     protected $casts = [
-        'fecha_envío' => 'datetime',
+        'fecha_envio' => 'datetime',
         'fecha_entrega' => 'datetime',
     ];
     protected $table = 'envios';
