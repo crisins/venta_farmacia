@@ -27,7 +27,7 @@ class AtencionClienteTest extends TestCase
             'usuario_id' => $usuario->id,
         ]);
 
-        $this->assertEquals($usuario->id, $atencion->usuario->id);
+        $this->assertEquals($usuario->id, $atencion->usuario_id);
     }
 
     public function test_cast_de_fecha()
