@@ -9,7 +9,6 @@ use App\Models\Venta;
 
 class DetalleVentaService
 {
-    #POST
     public function crearDetalle(array $data): ?DetalleVenta
     {
         $inventario = Inventario::where('producto_id', $data['producto_id'])->first();
@@ -32,7 +31,6 @@ class DetalleVentaService
         $inventario->stock_actual -= $data['cantidad'];
         $inventario->save();
 
-        // 1. Crear el detalle
         $detalle = DetalleVenta::create([
             'venta_id'        => $data['venta_id'],
             'producto_id'     => $data['producto_id'],
@@ -41,7 +39,6 @@ class DetalleVentaService
             'subtotal'        => $subtotal,
         ]);
 
-        // 2. Sumar al total de la venta
         $venta = Venta::find($data['venta_id']);
         if ($venta) {
             $venta->total += $subtotal;
@@ -50,17 +47,17 @@ class DetalleVentaService
 
         return $detalle;
     }
-    #GETALL
+
     public function obtenerTodos()
     {
         return DetalleVenta::orderBy('id', 'desc')->get();
     }
-    #GET ID
+
     public function obtenerPorId($id)
     {
         return DetalleVenta::find($id);
     }
-    #PUT
+
     public function actualizarDetalle($id, array $data): ?DetalleVenta
     {
         $detalle = DetalleVenta::where('id', $id)->first();
@@ -69,14 +66,13 @@ class DetalleVentaService
             return null;
         }
 
-        // Devolver la cantidad anterior al inventario original
+        // Devolver cantidad anterior al inventario
         $inventarioAnterior = Inventario::where('producto_id', $detalle->producto_id)->first();
         if ($inventarioAnterior) {
-            $inventarioAnterior->stock += $detalle->cantidad;
+            $inventarioAnterior->stock_actual += $detalle->cantidad;
             $inventarioAnterior->save();
         }
 
-        // Obtener el precio del nuevo producto
         $producto = Producto::find($data['producto_id']);
         if (!$producto) {
             throw new \Exception("Producto no encontrado.");
@@ -85,16 +81,14 @@ class DetalleVentaService
         $nuevoPrecio = $producto->precio;
         $nuevoSubtotal = $data['cantidad'] * $nuevoPrecio;
 
-        // Descontar la nueva cantidad del inventario nuevo
         $inventarioNuevo = Inventario::where('producto_id', $data['producto_id'])->first();
-        if (!$inventarioNuevo || $inventarioNuevo->stock < $data['cantidad']) {
+        if (!$inventarioNuevo || $inventarioNuevo->stock_actual < $data['cantidad']) {
             throw new \Exception("Stock insuficiente para el producto ID {$data['producto_id']}");
         }
 
-        $inventarioNuevo->stock -= $data['cantidad'];
+        $inventarioNuevo->stock_actual -= $data['cantidad'];
         $inventarioNuevo->save();
 
-        // Actualizar el detalle
         $detalle->update([
             'producto_id'     => $data['producto_id'],
             'cantidad'        => $data['cantidad'],
@@ -105,7 +99,6 @@ class DetalleVentaService
         return $detalle;
     }
 
-    #DELETE
     public function eliminarDetalle($id): bool
     {
         $detalle = DetalleVenta::find($id);
@@ -114,7 +107,6 @@ class DetalleVentaService
             return false;
         }
 
-        // 1. Devolver cantidad al inventario
         $inventario = Inventario::where('producto_id', $detalle->producto_id)->first();
         if ($inventario) {
             $inventario->stock_actual += $detalle->cantidad;
@@ -122,11 +114,8 @@ class DetalleVentaService
         }
 
         $ventaId = $detalle->venta_id;
-
-        // 2. Eliminar el detalle
         $detalle->delete();
 
-        // 3. Recalcular total de la venta
         $venta = Venta::find($ventaId);
         if ($venta) {
             $nuevoTotal = $venta->detalles()->sum('subtotal');
@@ -137,4 +126,3 @@ class DetalleVentaService
         return true;
     }
 }
-
