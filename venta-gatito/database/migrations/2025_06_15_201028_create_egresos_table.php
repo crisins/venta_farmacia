@@ -4,22 +4,28 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
         Schema::create('egresos', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('proveedor_id');
-            $table->unsignedBigInteger('usuario_id');
+            $table->foreignId('proveedor_id')->constrained('proveedores');
+            $table->foreignId('usuario_id')->constrained('usuarios');
             $table->date('fecha');
-            $table->decimal('total', 10, 2)->default(0);
+            // ¡Asegúrate de que esta línea esté presente y no comentada!
+            $table->string('tipo', 50); // Añade esta línea para la columna 'tipo'
+            $table->decimal('total', 10, 2);
             $table->timestamps();
-
-            $table->foreign('proveedor_id')->references('id')->on('proveedores')->onDelete('cascade');
-            $table->foreign('usuario_id')->references('id')->on('usuarios')->onDelete('cascade');
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::dropIfExists('egresos');

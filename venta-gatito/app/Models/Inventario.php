@@ -12,9 +12,9 @@ class Inventario extends Model
     protected $fillable = [
         'producto_id',
         'stock_actual',
+        //'ultima_actualizacion'
     ];
 
-    
     public function producto()
     {
         return $this->belongsTo(Producto::class);

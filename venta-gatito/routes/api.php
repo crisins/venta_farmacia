@@ -14,6 +14,7 @@ use App\Http\Controllers\EnvioController;
 use App\Http\Controllers\AtencionClienteController;
 use App\Http\Controllers\VentaController;
 use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\EgresoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -125,3 +126,10 @@ Route::prefix('atencion_cliente')->group(function() {
     Route::put('{id}', [AtencionClienteController::class, 'update']);
     Route::delete('{id}', [AtencionClienteController::class, 'destroy']);
 });
+
+// Egreso
+Route::get('egresos', [EgresoController::class, 'index']);
+Route::get('egresos/{id}', [EgresoController::class, 'show']);
+Route::post('egresos', [EgresoController::class, 'store']); 
+Route::put('egresos/{id}', [EgresoController::class, 'update']);
+Route::delete('egresos/{id}', [EgresoController::class, 'destroy']);

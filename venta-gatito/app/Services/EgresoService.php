@@ -1,6 +1,7 @@
 <?php
 
-/* * EgresoService.php
+/*
+ * EgresoService.php
  * Servicio para manejar la lógica de negocio relacionada con los egresos.
  * Este servicio se encarga de interactuar con el modelo Egreso y realizar operaciones CRUD.
  *
@@ -64,10 +65,11 @@ class EgresoService
             'proveedor_id' => 'required|exists:proveedores,id',
             'usuario_id' => 'required|exists:usuarios,id',
             'fecha' => 'required|date',
+            'tipo' => 'required|in:entrada,salida,ajuste',
             'productos' => 'required|array|min:1',
             'productos.*.producto_id' => 'required|exists:productos,id',
             'productos.*.cantidad' => 'required|integer|min:1',
-            'productos.*.precio_unitario' => 'required|numeric|min:0',
+            'productos.*.precio_unitario' => 'required|numeric|min:0', // Este es el precio/costo para el egreso
         ]);
 
         if ($validator->fails()) {
@@ -76,11 +78,13 @@ class EgresoService
 
         return DB::transaction(function () use ($data) {
             $total = 0;
+            $tipoEgreso = $data['tipo']; // Obtener el tipo de egreso
 
             $egreso = Egreso::create([
                 'proveedor_id' => $data['proveedor_id'],
                 'usuario_id' => $data['usuario_id'],
                 'fecha' => $data['fecha'],
+                'tipo' => $tipoEgreso,
                 'total' => 0, // se actualiza luego
             ]);
 
@@ -93,26 +97,40 @@ class EgresoService
                     'egreso_id' => $egreso->id,
                     'producto_id' => $item['producto_id'],
                     'cantidad' => $item['cantidad'],
-                    'precio_unitario' => $item['precio_unitario'],
+                    'precio_unitario' => $item['precio_unitario'], // <--- CORREGIDO AQUÍ: Usar 'precio_unitario'
                     'subtotal' => $subtotal,
                 ]);
 
-                // Verificar si existe inventario
+                // Verificar si existe inventario, si no, crearlo con stock 0
                 $inventario = Inventario::firstOrCreate(
                     ['producto_id' => $item['producto_id']],
                     ['stock_actual' => 0]
                 );
 
-                // Actualizar stock
-                $inventario->stock_actual += $item['cantidad'];
+                // Lógica para actualizar stock basada en el tipo de egreso
+                if ($tipoEgreso === 'entrada' || ($tipoEgreso === 'ajuste' && $item['cantidad'] > 0)) {
+                    $inventario->stock_actual += $item['cantidad'];
+                } elseif ($tipoEgreso === 'salida' || ($tipoEgreso === 'ajuste' && $item['cantidad'] < 0)) {
+                    // Para una salida o ajuste negativo, verificar stock antes de restar
+                    if ($inventario->stock_actual < $item['cantidad']) {
+                        throw ValidationException::withMessages([
+                            'productos.' . $item['producto_id'] => ['Stock insuficiente para la salida del producto ID ' . $item['producto_id'] . '. Stock disponible: ' . $inventario->stock_actual]
+                        ]);
+                    }
+                    $inventario->stock_actual -= $item['cantidad'];
+                }
                 $inventario->save();
+
+                // Determinar el tipo de movimiento de inventario basado en el tipo de egreso
+                $movimientoTipo = ($tipoEgreso === 'entrada' || ($tipoEgreso === 'ajuste' && $item['cantidad'] > 0)) ? 'entrada' : 'salida';
+                $cantidadMovimiento = abs($item['cantidad']); // La cantidad en MovimientoInventario debe ser siempre positiva
 
                 // Registrar movimiento de inventario
                 MovimientoInventario::create([
                     'producto_id' => $item['producto_id'],
-                    'tipo' => 'entrada',
-                    'cantidad' => $item['cantidad'],
-                    'descripcion' => 'Egreso ID ' . $egreso->id,
+                    'tipo' => $movimientoTipo,
+                    'cantidad' => $cantidadMovimiento,
+                    'descripcion' => 'Egreso ID ' . $egreso->id . ' (' . $tipoEgreso . ')',
                     'fecha' => now(),
                 ]);
             }
@@ -132,10 +150,11 @@ class EgresoService
             'proveedor_id' => 'required|exists:proveedores,id',
             'usuario_id' => 'required|exists:usuarios,id',
             'fecha' => 'required|date',
+            'tipo' => 'required|in:entrada,salida,ajuste',
             'productos' => 'required|array|min:1',
             'productos.*.producto_id' => 'required|exists:productos,id',
             'productos.*.cantidad' => 'required|integer|min:1',
-            'productos.*.precio_unitario' => 'required|numeric|min:0',
+            'productos.*.precio_unitario' => 'required|numeric|min:0', // Este es el precio/costo para el egreso
         ]);
 
         if ($validator->fails()) {
@@ -144,20 +163,26 @@ class EgresoService
 
         return DB::transaction(function () use ($egresoId, $data) {
             $egreso = Egreso::with('detalles')->findOrFail($egresoId);
+            $tipoNuevoEgreso = $data['tipo']; // Obtener el nuevo tipo de egreso
 
             // 1. REVERTIR INVENTARIO Y MOVIMIENTOS ANTERIORES
             foreach ($egreso->detalles as $detalle) {
-                // Restar stock
                 $inventario = Inventario::where('producto_id', $detalle->producto_id)->first();
                 if ($inventario) {
-                    $inventario->stock_actual -= $detalle->cantidad;
+                    // Revertir según el tipo original del egreso (si se guardó)
+                    $tipoOriginalEgreso = $egreso->tipo ?? 'entrada'; // Asume 'entrada' si no hay tipo guardado
+
+                    if ($tipoOriginalEgreso === 'entrada' || ($tipoOriginalEgreso === 'ajuste' && $detalle->cantidad > 0)) {
+                        $inventario->stock_actual -= $detalle->cantidad;
+                    } elseif ($tipoOriginalEgreso === 'salida' || ($tipoOriginalEgreso === 'ajuste' && $detalle->cantidad < 0)) {
+                        $inventario->stock_actual += $detalle->cantidad;
+                    }
                     $inventario->save();
                 }
 
-                // Borrar movimientos de este egreso
+                // Borrar movimientos de inventario asociados al egreso original
                 MovimientoInventario::where('producto_id', $detalle->producto_id)
-                    ->where('tipo', 'entrada')
-                    ->where('descripcion', 'like', 'Egreso ID ' . $egreso->id)
+                    ->where('descripcion', 'like', 'Egreso ID ' . $egreso->id . '%') // Busca por descripción más general
                     ->delete();
             }
 
@@ -169,6 +194,7 @@ class EgresoService
                 'proveedor_id' => $data['proveedor_id'],
                 'usuario_id' => $data['usuario_id'],
                 'fecha' => $data['fecha'],
+                'tipo' => $tipoNuevoEgreso, // Actualizar el tipo de egreso
                 'total' => 0, // recalculamos abajo
             ]);
 
@@ -183,7 +209,7 @@ class EgresoService
                     'egreso_id' => $egreso->id,
                     'producto_id' => $item['producto_id'],
                     'cantidad' => $item['cantidad'],
-                    'precio_unitario' => $item['precio_unitario'],
+                    'precio_unitario' => $item['precio_unitario'], // <--- CORREGIDO AQUÍ: Usar 'precio_unitario'
                     'subtotal' => $subtotal,
                 ]);
 
@@ -192,14 +218,28 @@ class EgresoService
                     ['stock_actual' => 0]
                 );
 
-                $inventario->stock_actual += $item['cantidad'];
+                // Aplicar stock según el NUEVO tipo de egreso
+                if ($tipoNuevoEgreso === 'entrada' || ($tipoNuevoEgreso === 'ajuste' && $item['cantidad'] > 0)) {
+                    $inventario->stock_actual += $item['cantidad'];
+                } elseif ($tipoNuevoEgreso === 'salida' || ($tipoNuevoEgreso === 'ajuste' && $item['cantidad'] < 0)) {
+                     if ($inventario->stock_actual < $item['cantidad']) {
+                        throw ValidationException::withMessages([
+                            'productos.' . $item['producto_id'] => ['Stock insuficiente para la salida del producto ID ' . $item['producto_id'] . '. Stock disponible: ' . $inventario->stock_actual]
+                        ]);
+                    }
+                    $inventario->stock_actual -= $item['cantidad'];
+                }
                 $inventario->save();
+
+                // Determinar el tipo de movimiento de inventario basado en el nuevo tipo de egreso
+                $movimientoTipo = ($tipoNuevoEgreso === 'entrada' || ($tipoNuevoEgreso === 'ajuste' && $item['cantidad'] > 0)) ? 'entrada' : 'salida';
+                $cantidadMovimiento = abs($item['cantidad']);
 
                 MovimientoInventario::create([
                     'producto_id' => $item['producto_id'],
-                    'tipo' => 'entrada',
-                    'cantidad' => $item['cantidad'],
-                    'descripcion' => 'Egreso ID ' . $egreso->id,
+                    'tipo' => $movimientoTipo,
+                    'cantidad' => $cantidadMovimiento,
+                    'descripcion' => 'Egreso ID ' . $egreso->id . ' (Actualización - ' . $tipoNuevoEgreso . ')',
                     'fecha' => now(),
                 ]);
             }
@@ -221,14 +261,28 @@ class EgresoService
             foreach ($egreso->detalles as $detalle) {
                 $inventario = Inventario::where('producto_id', $detalle->producto_id)->first();
                 if ($inventario) {
-                    $inventario->stock_actual -= $detalle->cantidad;
+                    // Revertir el stock según el tipo de egreso que se elimina
+                    $tipoEgresoOriginal = $egreso->tipo ?? 'entrada'; // Asume 'entrada' si no hay tipo guardado en el egreso
+
+                    if ($tipoEgresoOriginal === 'entrada' || ($tipoEgresoOriginal === 'ajuste' && $detalle->cantidad > 0)) {
+                        $inventario->stock_actual -= $detalle->cantidad;
+                    } elseif ($tipoEgresoOriginal === 'salida' || ($tipoEgresoOriginal === 'ajuste' && $detalle->cantidad < 0)) {
+                        $inventario->stock_actual += $detalle->cantidad;
+                    }
                     $inventario->save();
                 }
 
                 // 2. Eliminar movimiento de inventario correspondiente
+                // Corregir la descripción para que coincida con lo que se inserta
                 MovimientoInventario::where('producto_id', $detalle->producto_id)
-                    ->where('tipo', 'entrada')
-                    ->where('descripcion', 'like', 'Egreso ID ' . $egreso->id)
+                    ->where(function ($query) use ($egreso) {
+                        $query->where('descripcion', 'like', 'Egreso ID ' . $egreso->id . ' (entrada)')
+                              ->orWhere('descripcion', 'like', 'Egreso ID ' . $egreso->id . ' (salida)')
+                              ->orWhere('descripcion', 'like', 'Egreso ID ' . $egreso->id . ' (ajuste)')
+                              ->orWhere('descripcion', 'like', 'Egreso ID ' . $egreso->id . ' (Actualización - entrada)')
+                              ->orWhere('descripcion', 'like', 'Egreso ID ' . $egreso->id . ' (Actualización - salida)')
+                              ->orWhere('descripcion', 'like', 'Egreso ID ' . $egreso->id . ' (Actualización - ajuste)');
+                    })
                     ->delete();
             }
 

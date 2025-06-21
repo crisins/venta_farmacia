@@ -13,6 +13,7 @@ class Egreso extends Model
         'proveedor_id',
         'usuario_id',
         'fecha',
+        'tipo', // <--- ¡Añadir esta línea!
         'total',
     ];
 

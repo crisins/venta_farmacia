@@ -9,9 +9,12 @@ use App\Models\Usuario;
 use App\Models\Cliente;
 use App\Services\DetalleVentaService;
 use App\Services\VentaService;
+use Illuminate\Foundation\Testing\RefreshDatabase; // <-- ¡Línea añadida!
 
 class VentaIntegracionTest extends TestCase
 {
+    use RefreshDatabase; // <-- ¡Línea añadida!
+
     public function test_registro_de_venta_valida_actualiza_stock_y_total()
     {
         $producto = Producto::factory()->create(['precio' => 1000]);
@@ -45,7 +48,7 @@ class VentaIntegracionTest extends TestCase
         $inventario = Inventario::where('producto_id', $producto->id)->first();
 
         $this->assertEquals(8, $inventario->stock_actual); // 10 - 2 vendidos
-        $this->assertEquals(2000, $venta->total);          // 2 * 1000
-        $this->assertCount(1, $venta->detalles);           // 1 detalle creado
+        $this->assertEquals(2000, $venta->total);           // 2 * 1000
+        $this->assertCount(1, $venta->detalles);            // 1 detalle creado
     }
 }
