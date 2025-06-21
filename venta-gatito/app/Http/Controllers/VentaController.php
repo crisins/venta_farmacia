@@ -6,7 +6,7 @@ use Illuminate\Http\JsonResponse;
 use App\Services\VentaService;
 use App\Http\Requests\VentaRequest;
 use App\Models\Venta;
-
+use InvalidArgumentException; // Importar para capturar errores específicos del servicio
 
 class VentaController extends Controller
 {
@@ -37,11 +37,16 @@ class VentaController extends Controller
                 'data' => $venta
             ], 201);
 
-        } catch (\Exception $e) {
+        } catch (InvalidArgumentException $e) { // Captura específicamente esta excepción del servicio
             return response()->json([
-                'message' => 'Error al registrar venta',
+                'message' => 'Error de validación o lógica de negocio: ' . $e->getMessage(),
                 'error' => $e->getMessage()
-            ], 400);
+            ], 400); // 400 Bad Request es apropiado para datos lógicamente inválidos
+        } catch (\Exception $e) { // Captura cualquier otra excepción
+            return response()->json([
+                'message' => 'Error inesperado al registrar venta',
+                'error' => $e->getMessage()
+            ], 500); // Un 500 Internal Server Error es más apropiado para errores inesperados
         }
     }
 
@@ -63,26 +68,45 @@ class VentaController extends Controller
 
     public function update(VentaRequest $request, $id): JsonResponse
     {
-        $venta = $this->ventaService->actualizarVenta($id, $request->validated());
+        try {
+            $venta = $this->ventaService->actualizarVenta($id, $request->validated());
 
-        if (!$venta) {
-            return response()->json(['message' => 'Venta no encontrada.'], 404);
+            if (!$venta) {
+                return response()->json(['message' => 'Venta no encontrada.'], 404);
+            }
+
+            return response()->json([
+                'message' => 'Venta actualizada correctamente',
+                'data' => $venta
+            ]);
+        } catch (InvalidArgumentException $e) {
+            return response()->json([
+                'message' => 'Error en la actualización de la venta',
+                'error' => $e->getMessage()
+            ], 400);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error inesperado al actualizar venta',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            'message' => 'Venta actualizada correctamente',
-            'data' => $venta
-        ]);
     }
 
     public function destroy($id): JsonResponse
     {
-        $eliminada = $this->ventaService->eliminarVenta($id);
+        try {
+            $eliminada = $this->ventaService->eliminarVenta($id);
 
-        if (!$eliminada) {
-            return response()->json(['message' => 'Venta no encontrada.'], 404);
+            if (!$eliminada) {
+                return response()->json(['message' => 'Venta no encontrada.'], 404);
+            }
+
+            return response()->json(['message' => 'Venta eliminada correctamente.']);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al eliminar la venta',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        return response()->json(['message' => 'Venta eliminada correctamente.']);
     }
 }

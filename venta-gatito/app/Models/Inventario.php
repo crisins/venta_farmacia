@@ -14,7 +14,7 @@ class Inventario extends Model
         'stock_actual',
     ];
 
-    // Aquí puedes agregar relaciones si las necesitas
+    
     public function producto()
     {
         return $this->belongsTo(Producto::class);

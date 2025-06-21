@@ -10,10 +10,12 @@ class CreateUsuariosTable extends Migration
     {
         Schema::create('usuarios', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('nombre'); // Cambiado de 'name'
             $table->string('email')->unique();
             $table->string('password');
-            $table->string('rol'); // Aquí agregas la columna 'rol'
+            $table->string('tipo'); // Cambiado de 'rol' para coincidir con validaciones
+            $table->string('telefono'); // Nuevo campo
+            $table->string('direccion'); // Nuevo campo
             $table->timestamps();
         });
     }

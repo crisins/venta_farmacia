@@ -3,10 +3,11 @@
 namespace App\Services;
 
 use App\Models\Venta;
-use App\Models\DetalleVenta;
-use App\Models\Inventario;
 use App\Models\Producto;
+use App\Models\Inventario;
+use App\Models\DetalleVenta;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException; // Para excepciones de argumentos inválidos
 
 class VentaService
 {
@@ -18,6 +19,14 @@ class VentaService
     public function registrarVenta(array $data): Venta
     {
         return DB::transaction(function () use ($data) {
+            // **Capa de seguridad del servicio:**
+            // Aunque VentaRequest.php ya tiene 'productos.min:1',
+            // esta validación protege si el servicio es llamado directamente
+            // o si por alguna razón la validación del request es omitida.
+            if (empty($data['productos'])) {
+                throw new InvalidArgumentException("La venta debe contener al menos un producto.");
+            }
+
             $venta = Venta::create([
                 'cliente_id' => $data['cliente_id'],
                 'usuario_id' => $data['usuario_id'],
@@ -29,12 +38,15 @@ class VentaService
             foreach ($data['productos'] as $detalle) {
                 $producto = Producto::find($detalle['producto_id']);
                 if (!$producto) {
-                    throw new \Exception("Producto no encontrado.");
+                    throw new InvalidArgumentException("Producto no encontrado con ID: {$detalle['producto_id']}."); // Cambio de \Exception a InvalidArgumentException
                 }
 
                 $inventario = Inventario::where('producto_id', $detalle['producto_id'])->first();
-                if (!$inventario || $inventario->stock_actual < $detalle['cantidad']) {
-                    throw new \Exception("Stock insuficiente para producto ID {$detalle['producto_id']}");
+                if (!$inventario) { // O si no hay stock (este es un doble chequeo)
+                    throw new InvalidArgumentException("No se encontró inventario para el producto ID {$detalle['producto_id']}.");
+                }
+                if ($inventario->stock_actual < $detalle['cantidad']) {
+                    throw new InvalidArgumentException("Stock insuficiente para el producto ID {$detalle['producto_id']}. Stock actual: {$inventario->stock_actual}, solicitado: {$detalle['cantidad']}."); // Cambio de \Exception a InvalidArgumentException
                 }
 
                 $precioUnitario = $producto->precio;
@@ -50,7 +62,6 @@ class VentaService
                     'precio_unitario' => $precioUnitario,
                     'subtotal' => $subtotal,
                 ]);
-
                 $total += $subtotal;
             }
 
@@ -75,7 +86,8 @@ class VentaService
                 'fecha' => $data['fecha'] ?? $venta->fecha,
             ]);
 
-            // Actualizar detalles (opcional: puedes agregar lógica para actualizar detalles)
+            // TODO: Lógica para actualizar detalles y ajustar stock.
+            // Esto es crucial para la funcionalidad de actualización completa.
 
             return $venta->fresh('detalles');
         });
@@ -89,7 +101,6 @@ class VentaService
                 return false;
             }
 
-            // Devolver stock de cada detalle
             foreach ($venta->detalles as $detalle) {
                 $inventario = Inventario::where('producto_id', $detalle->producto_id)->first();
                 if ($inventario) {
