@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use App\Models\Inventario;
 use App\Models\Producto;
 
 class EgresoRequest extends FormRequest
@@ -46,25 +45,15 @@ class EgresoRequest extends FormRequest
                     $tipoEgreso = $this->input('tipo');
 
                     if ($producto_id && $tipoEgreso === 'salida') {
-                        $inventario = Inventario::where('producto_id', $producto_id)->first();
-                        if (!$inventario || $inventario->stock_actual < $value) {
-                            $fail('Stock insuficiente para egreso de tipo salida del producto ID ' . $producto_id . '. Stock disponible: ' . ($inventario ? $inventario->stock_actual : 0));
+                        $producto = Producto::find($producto_id);
+                        if (!$producto || $producto->stock < $value) {
+                            $fail('Stock insuficiente para egreso de tipo salida del producto ID ' . $producto_id . '. Stock disponible: ' . ($producto ? $producto->stock : 0));
                         }
                     }
                 }
             ],
             'detalles.*.costo_unitario' => 'required|numeric|min:0',
         ];
-
-        // Reglas adicionales si estás actualizando un egreso y quieres validar ciertos campos
-        // if ($this->isMethod('PUT')) {
-        //     // 'proveedor_id' => 'sometimes|exists:proveedores,id',
-        //     // 'usuario_id' => 'sometimes|exists:usuarios,id',
-        //     // 'fecha' => 'sometimes|date',
-        //     // 'tipo' => 'sometimes|in:entrada,salida,ajuste',
-        //     // ... otras reglas para update
-        // }
-
         return $rules;
     }
 

@@ -21,9 +21,40 @@ class VentaController extends Controller
     {
         $ventas = $this->ventaService->obtenerVentas();
 
+        // Formatear la respuesta para que sea más ordenada y legible
+        $ventasFormateadas = $ventas->map(function ($venta) {
+            return [
+                'id' => $venta->id,
+                'fecha' => $venta->fecha,
+                'total' => $venta->total,
+                'usuario' => [
+                    'id' => $venta->usuario->id,
+                    'nombre' => $venta->usuario->nombre,
+                    'email' => $venta->usuario->email,
+                    'tipo' => $venta->usuario->tipo,
+                    'telefono' => $venta->usuario->telefono,
+                    'direccion' => $venta->usuario->direccion,
+                ],
+                'detalles' => collect($venta->detalles)->map(function ($detalle) {
+                    return [
+                        'producto' => [
+                            'id' => $detalle->producto->id,
+                            'nombre' => $detalle->producto->nombre,
+                            'descripcion' => $detalle->producto->descripcion,
+                            'precio' => $detalle->producto->precio,
+                            'requiere_receta' => $detalle->producto->requiere_receta,
+                        ],
+                        'cantidad' => $detalle->cantidad,
+                        'precio_unitario' => $detalle->precio_unitario,
+                        'subtotal' => $detalle->subtotal,
+                    ];
+                })
+            ];
+        });
+
         return response()->json([
             'message' => 'Lista de ventas',
-            'data' => $ventas
+            'data' => $ventasFormateadas
         ]);
     }
 
@@ -54,24 +85,48 @@ class VentaController extends Controller
 
     public function show($id): JsonResponse
     {
-        // Se mantiene el try-catch original para show, ya que el servicio no lanza InvalidArgumentException aquí.
         try {
-            $venta = Venta::with('detalles.producto', 'cliente', 'usuario')->find($id); // Agregando relaciones para consistencia
-
+            $venta = Venta::with('detalles.producto', 'usuario')->find($id);
             if (!$venta) {
                 return response()->json(['message' => 'Venta no encontrada'], 404);
             }
-
+            // Formatear la respuesta para que sea más ordenada y legible
+            $ventaFormateada = [
+                'id' => $venta->id,
+                'fecha' => $venta->fecha,
+                'total' => $venta->total,
+                'usuario' => [
+                    'id' => $venta->usuario->id,
+                    'nombre' => $venta->usuario->nombre,
+                    'email' => $venta->usuario->email,
+                    'tipo' => $venta->usuario->tipo,
+                    'telefono' => $venta->usuario->telefono,
+                    'direccion' => $venta->usuario->direccion,
+                ],
+                'detalles' => collect($venta->detalles)->map(function ($detalle) {
+                    return [
+                        'producto' => [
+                            'id' => $detalle->producto->id,
+                            'nombre' => $detalle->producto->nombre,
+                            'descripcion' => $detalle->producto->descripcion,
+                            'precio' => $detalle->producto->precio,
+                            'requiere_receta' => $detalle->producto->requiere_receta,
+                        ],
+                        'cantidad' => $detalle->cantidad,
+                        'precio_unitario' => $detalle->precio_unitario,
+                        'subtotal' => $detalle->subtotal,
+                    ];
+                })
+            ];
             return response()->json([
                 'message' => 'Venta obtenida correctamente',
-                'data' => $venta
+                'data' => $ventaFormateada
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error al obtener venta',
                 'error' => $e->getMessage()
-            ], 400); // Mantenemos 400 como en tu implementación anterior si el error es genérico.
+            ], 400);
         }
     }
 

@@ -4,181 +4,154 @@ namespace App\Services;
 
 use App\Models\Venta;
 use App\Models\DetalleVenta;
-use App\Models\Producto; // Importar el modelo Producto
-use App\Models\Inventario; // Importar el modelo Inventario
+use App\Models\Producto;
 use Illuminate\Support\Facades\DB;
-use InvalidArgumentException; // Asegúrate de que esta línea esté presente
+use InvalidArgumentException;
 
 class VentaService
 {
     public function obtenerVentas()
     {
-        return Venta::with(['cliente', 'usuario', 'detalles.producto'])->get();
+        return Venta::with(['usuario', 'detalles.producto'])->get();
     }
 
     public function registrarVenta(array $data): Venta
     {
         return DB::transaction(function () use ($data) {
             $venta = Venta::create([
-                'cliente_id' => $data['cliente_id'],
                 'usuario_id' => $data['usuario_id'],
                 'fecha' => $data['fecha'],
-                'total' => 0, // Se calculará después de añadir detalles
+                'total' => 0,
             ]);
 
             $totalVenta = 0;
+
             foreach ($data['productos'] as $productoData) {
                 $producto = Producto::find($productoData['producto_id']);
-                $inventario = Inventario::where('producto_id', $productoData['producto_id'])->first();
 
-                if (!$producto || !$inventario) {
-                    throw new InvalidArgumentException("Producto o inventario no encontrado para ID: {$productoData['producto_id']}.");
+                if (!$producto) {
+                    throw new InvalidArgumentException("Producto no encontrado para ID: {$productoData['producto_id']}.");
                 }
 
-                if ($inventario->stock_actual < $productoData['cantidad']) {
-                    throw new InvalidArgumentException('Stock insuficiente para el producto ID ' . $productoData['producto_id'] . '. Stock disponible: ' . $inventario->stock_actual);
+                if ($producto->requiere_receta && (empty($productoData['con_receta']) || $productoData['con_receta'] !== true)) {
+                    throw new InvalidArgumentException('El producto requiere receta médica.');
+                }
+
+                if ($producto->stock < $productoData['cantidad']) {
+                    throw new InvalidArgumentException("Stock insuficiente para el producto ID {$producto->id}. Disponible: {$producto->stock}.");
                 }
 
                 $subtotal = $productoData['cantidad'] * $producto->precio;
-                $venta->detalles()->create([
+                $totalVenta += $subtotal;
+
+                DetalleVenta::create([
+                    'venta_id' => $venta->id,
                     'producto_id' => $producto->id,
                     'cantidad' => $productoData['cantidad'],
                     'precio_unitario' => $producto->precio,
                     'subtotal' => $subtotal,
                 ]);
 
-                // Reducir el stock
-                $inventario->stock_actual -= $productoData['cantidad'];
-                $inventario->save();
-
-                $totalVenta += $subtotal;
+                $producto->stock -= $productoData['cantidad'];
+                $producto->save();
             }
 
-            $venta->total = $totalVenta;
-            $venta->save();
+            $venta->update(['total' => $totalVenta]);
 
-            return $venta->fresh(['cliente', 'usuario', 'detalles.producto']);
+            return $venta->fresh(['detalles.producto', 'usuario']);
         });
     }
 
     public function actualizarVenta($id, array $data): ?Venta
     {
         return DB::transaction(function () use ($id, $data) {
-            $venta = Venta::with('detalles')->find($id); // Cargar los detalles existentes
+            $venta = Venta::with('detalles')->find($id);
             if (!$venta) {
-                return null; // O lanzar una excepción InvalidArgumentException
+                return null;
             }
 
-            // Mapear los detalles existentes por producto_id para fácil acceso
-            $existingDetails = $venta->detalles->keyBy('producto_id');
+            $existingDetails = $venta->detalles;
+            $productosAConservar = [];
             $newTotal = 0;
-            $productsToKeep = []; // Para llevar un registro de los productos que permanecen o se añaden
 
-            // Procesar los productos enviados en la actualización
-            foreach ($data['productos'] as $newProductData) {
-                $productoId = $newProductData['producto_id'];
-                $newQuantity = $newProductData['cantidad'];
-                $productsToKeep[] = $productoId; // Marcar este producto como "a mantener"
-
+            foreach ($data['productos'] as $item) {
+                $productoId = $item['producto_id'];
+                $cantidadNueva = $item['cantidad'];
+                $detalleExistente = $existingDetails->where('producto_id', $productoId)->first();
                 $producto = Producto::find($productoId);
                 if (!$producto) {
-                    throw new InvalidArgumentException("Producto con ID {$productoId} no encontrado.");
+                    throw new InvalidArgumentException("Producto no encontrado para ID: {$productoId}.");
                 }
-                $inventario = Inventario::where('producto_id', $productoId)->first();
-                if (!$inventario) {
-                    throw new InvalidArgumentException("Inventario no encontrado para producto ID {$productoId}.");
-                }
-
-                $oldDetail = $existingDetails->get($productoId);
-
-                if ($oldDetail) {
-                    // El producto ya existía en la venta
-                    $oldQuantity = $oldDetail->cantidad;
-                    $stockChange = $oldQuantity - $newQuantity; // Positivo si la cantidad se redujo (stock aumenta), Negativo si la cantidad aumentó (stock disminuye)
-
-                    if ($stockChange !== 0) {
-                        if ($stockChange < 0) { // La cantidad aumentó, deducir más stock
-                            $requiredStock = abs($stockChange); // Cantidad adicional necesaria
-                            if ($inventario->stock_actual < $requiredStock) {
-                                throw new InvalidArgumentException("Stock insuficiente para el producto ID {$productoId}. Necesitas {$requiredStock} unidades adicionales, disponibles: {$inventario->stock_actual}.");
-                            }
-                            $inventario->stock_actual -= $requiredStock; // Restar la cantidad adicional
-                        } else { // La cantidad disminuyó, devolver stock
-                            $inventario->stock_actual += $stockChange; // Sumar la cantidad devuelta
-                        }
-                        $inventario->save();
+                if ($detalleExistente) {
+                    $diferencia = $cantidadNueva - $detalleExistente->cantidad;
+                    if ($producto->stock < $diferencia) {
+                        throw new InvalidArgumentException("Stock insuficiente para el producto ID {$productoId}. Disponible: {$producto->stock}.");
                     }
-
-                    // Actualizar el detalle existente
-                    $oldDetail->update([
-                        'cantidad' => $newQuantity,
-                        'precio_unitario' => $producto->precio, // Usar precio actual del producto
-                        'subtotal' => $newQuantity * $producto->precio,
-                    ]);
-                    $newTotal += $oldDetail->subtotal;
-
-                } else {
-                    // Es un producto nuevo añadido a la venta
-                    if ($inventario->stock_actual < $newQuantity) {
-                        throw new InvalidArgumentException("Stock insuficiente para el nuevo producto ID {$productoId}. Necesitas {$newQuantity}, disponible: {$inventario->stock_actual}.");
-                    }
-                    $inventario->stock_actual -= $newQuantity;
-                    $inventario->save();
-
-                    $newDetail = $venta->detalles()->create([
-                        'producto_id' => $productoId,
-                        'cantidad' => $newQuantity,
+                    $producto->stock -= $diferencia;
+                    $producto->save();
+                    $detalleExistente->update([
+                        'cantidad' => $cantidadNueva,
                         'precio_unitario' => $producto->precio,
-                        'subtotal' => $newQuantity * $producto->precio,
+                        'subtotal' => $cantidadNueva * $producto->precio,
                     ]);
-                    $newTotal += $newDetail->subtotal;
-                }
-            }
-
-            // Eliminar detalles de productos que fueron removidos de la venta original
-            foreach ($existingDetails as $oldDetail) {
-                if (!in_array($oldDetail->producto_id, $productsToKeep)) {
-                    $inventario = Inventario::where('producto_id', $oldDetail->producto_id)->first();
-                    if ($inventario) {
-                        $inventario->stock_actual += $oldDetail->cantidad; // Devolver stock
-                        $inventario->save();
+                    $newTotal += $detalleExistente->subtotal;
+                    $productosAConservar[] = $productoId;
+                } else {
+                    if ($producto->stock < $cantidadNueva) {
+                        throw new InvalidArgumentException("Stock insuficiente para el producto ID {$productoId}. Disponible: {$producto->stock}.");
                     }
-                    $oldDetail->delete(); // Eliminar el detalle
+                    $producto->stock -= $cantidadNueva;
+                    $producto->save();
+                    $nuevoDetalle = DetalleVenta::create([
+                        'venta_id' => $venta->id,
+                        'producto_id' => $productoId,
+                        'cantidad' => $cantidadNueva,
+                        'precio_unitario' => $producto->precio,
+                        'subtotal' => $cantidadNueva * $producto->precio,
+                    ]);
+                    $newTotal += $nuevoDetalle->subtotal;
                 }
             }
 
-            // Actualizar información básica de la venta y el nuevo total
+            foreach ($existingDetails as $detalle) {
+                if (!in_array($detalle->producto_id, $productosAConservar)) {
+                    $producto = Producto::find($detalle->producto_id);
+                    if ($producto) {
+                        $producto->stock += $detalle->cantidad;
+                        $producto->save();
+                    }
+                    $detalle->delete();
+                }
+            }
+
             $venta->update([
-                'cliente_id' => $data['cliente_id'] ?? $venta->cliente_id,
                 'usuario_id' => $data['usuario_id'] ?? $venta->usuario_id,
                 'fecha' => $data['fecha'] ?? $venta->fecha,
-                'total' => $newTotal, // ¡Actualizar el total!
+                'total' => $newTotal,
             ]);
 
-            return $venta->fresh(['detalles.producto', 'cliente', 'usuario']); // Recargar relaciones
+            return $venta->fresh(['detalles.producto', 'usuario']);
         });
     }
-
 
     public function eliminarVenta($id): bool
     {
         return DB::transaction(function () use ($id) {
-            $venta = Venta::find($id);
+            $venta = Venta::with('detalles')->find($id);
             if (!$venta) {
                 return false;
             }
 
             foreach ($venta->detalles as $detalle) {
-                $inventario = Inventario::where('producto_id', $detalle->producto_id)->first();
-                if ($inventario) {
-                    $inventario->stock_actual += $detalle->cantidad;
-                    $inventario->save();
+                $producto = Producto::find($detalle->producto_id);
+                if ($producto) {
+                    $producto->stock += $detalle->cantidad;
+                    $producto->save();
                 }
-                $detalle->delete();
             }
 
+            $venta->detalles()->delete();
             $venta->delete();
-
             return true;
         });
     }

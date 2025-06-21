@@ -5,7 +5,6 @@ use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\PedidoController;
-use App\Http\Controllers\DetallePedidoController;
 use App\Http\Controllers\ProductoProveedorController;
 use App\Http\Controllers\RecetaMedicaController;
 use App\Http\Controllers\PagoController;
@@ -13,7 +12,6 @@ use App\Http\Controllers\EmpresaLogisticaController;
 use App\Http\Controllers\EnvioController;
 use App\Http\Controllers\AtencionClienteController;
 use App\Http\Controllers\VentaController;
-use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\EgresoController;
 
 /*
@@ -58,25 +56,19 @@ Route::get('ventas', [VentaController::class, 'index']);
 Route::get('ventas/{id}', [VentaController::class, 'show']);
 Route::put('ventas/{id}', [VentaController::class, 'update']);
 
+// Eliminadas rutas y referencia a ClienteController. Usar Usuario para gestión de compradores.
 // Clientes
-Route::get('clientes', [ClienteController::class, 'index']);
-Route::post('clientes', [ClienteController::class, 'store']);
-Route::get('clientes/{id}', [ClienteController::class, 'show']);
-Route::put('clientes/{id}', [ClienteController::class, 'update']);
-Route::delete('clientes/{id}', [ClienteController::class, 'destroy']);
+// Route::get('clientes', [ClienteController::class, 'index']);
+// Route::post('clientes', [ClienteController::class, 'store']);
+// Route::get('clientes/{id}', [ClienteController::class, 'show']);
+// Route::put('clientes/{id}', [ClienteController::class, 'update']);
+// Route::delete('clientes/{id}', [ClienteController::class, 'destroy']);
 
 // Pedidos
 Route::get('pedidos', [PedidoController::class, 'index']);
 Route::get('pedidos/{id}', [PedidoController::class, 'show']);
 Route::post('pedidos', [PedidoController::class, 'store']);
 Route::put('pedidos/{id}', [PedidoController::class, 'update']);
-
-// Detalle pedido
-Route::get('detalle-pedido', [DetallePedidoController::class, 'index']);
-Route::get('detalle-pedido/{id}', [DetallePedidoController::class, 'show']);
-Route::post('detalle-pedido', [DetallePedidoController::class, 'store']);
-Route::put('detalle-pedido/{id}', [DetallePedidoController::class, 'update']);
-Route::delete('detalle-pedido/{id}', [DetallePedidoController::class, 'destroy']);
 
 // ProductoProveedor
 Route::get('productos_proveedores', [ProductoProveedorController::class, 'index']);

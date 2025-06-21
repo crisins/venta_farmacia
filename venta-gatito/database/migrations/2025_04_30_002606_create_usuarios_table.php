@@ -10,12 +10,12 @@ class CreateUsuariosTable extends Migration
     {
         Schema::create('usuarios', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre'); // Cambiado de 'name'
+            $table->string('nombre');
             $table->string('email')->unique();
             $table->string('password');
-            $table->string('tipo'); // Cambiado de 'rol' para coincidir con validaciones
-            $table->string('telefono'); // Nuevo campo
-            $table->string('direccion'); // Nuevo campo
+            $table->string('tipo');
+            $table->string('telefono');
+            $table->string('direccion'); 
             $table->timestamps();
         });
     }
@@ -25,4 +25,3 @@ class CreateUsuariosTable extends Migration
         Schema::dropIfExists('usuarios');
     }
 }
-

@@ -2,26 +2,22 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Producto extends Model
 {
     use HasFactory;
+
     protected $fillable = [
         'nombre',
         'descripcion',
         'precio',
-        'requiere_receta', // Asegúrate de que esté aquí
-        'estado',          // Asegúrate de que esté aquí
+        'requiere_receta',
+        'estado',
         'fecha_alta',
-        // 'stock', // Si este campo no existe en tu migración de 'productos', ELIMÍNALO de aquí también.
-                  // El stock se maneja en el modelo Inventario.
+        'stock', // <--- ¡Añade esta línea!
     ];
 
-    // Opcional: define una relación con Inventario si la necesitas
-    public function inventario()
-    {
-        return $this->hasOne(Inventario::class);
-    }
+    // Eliminada relación con Inventario, ya no es necesaria
 }

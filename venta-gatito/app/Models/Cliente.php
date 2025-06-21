@@ -9,6 +9,6 @@ class Cliente extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['nombre', 'email', 'telefono'];
+    // Eliminado: Modelo Cliente. Usar Usuario para toda la lógica de ventas y compras.
 }
 

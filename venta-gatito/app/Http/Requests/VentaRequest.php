@@ -3,7 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use App\Models\Inventario;
+use App\Models\Producto;
 
 class VentaRequest extends FormRequest
 {
@@ -23,11 +23,29 @@ class VentaRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'cliente_id' => 'required|exists:clientes,id',
             'usuario_id' => 'required|exists:usuarios,id',
             'fecha' => 'required|date',
             'productos' => 'required|array|min:1', // **Validación clave: debe haber al menos un producto**
-            'productos.*.producto_id' => 'required|exists:productos,id',
+            'productos.*.producto_id' => [
+                'required',
+                'exists:productos,id',
+                // Validación para productos que requieren receta
+                function ($attribute, $value, $fail) {
+                    $index = explode('.', $attribute)[1]; // Obtiene el índice del producto en el array
+                    $producto = Producto::find($value); // Busca el producto por su ID
+
+                    // Si el producto existe y requiere receta
+                    if ($producto && $producto->requiere_receta) {
+                        // Verifica si el campo 'con_receta' está presente y es true para este producto
+                        $conReceta = $this->input("productos.{$index}.con_receta");
+
+                        // Si el producto requiere receta y 'con_receta' no es true
+                        if (!$conReceta) {
+                            $fail("El producto '{$producto->nombre}' (ID: {$producto->id}) requiere receta médica y debe incluir '\"con_receta\": true' en su detalle.");
+                        }
+                    }
+                },
+            ],
             'productos.*.cantidad' => [
                 'required',
                 'integer',
@@ -37,19 +55,20 @@ class VentaRequest extends FormRequest
                     $producto_id = $this->input("productos.{$index}.producto_id");
 
                     if ($producto_id) {
-                        $inventario = Inventario::where('producto_id', $producto_id)->first();
+                        $producto = Producto::find($producto_id);
 
-                        if (!$inventario) {
-                            $fail("No se encontró inventario para el producto ID $producto_id.");
+                        if (!$producto) {
+                            $fail("No se encontró producto con ID $producto_id.");
                             return;
                         }
 
-                        if ($inventario->stock_actual < $value) {
-                            $fail("Stock insuficiente para el producto ID $producto_id. Stock actual: {$inventario->stock_actual}, solicitado: {$value}.");
+                        if ($producto->stock < $value) {
+                            $fail("Stock insuficiente para el producto ID $producto_id. Stock actual: {$producto->stock}, solicitado: {$value}.");
                         }
                     }
                 }
             ],
+            'productos.*.con_receta' => 'sometimes|boolean', // Nuevo campo opcional para indicar si se adjunta receta
         ];
     }
 
@@ -59,9 +78,7 @@ class VentaRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'cliente_id.required' => 'El cliente es obligatorio.',
-            'cliente_id.exists' => 'El cliente seleccionado no existe.',
-            'usuario_id.required' => 'El usuario es obligatorio.',
+            'usuario_id.required' => 'El usuario comprador es obligatorio.',
             'usuario_id.exists' => 'El usuario seleccionado no existe.',
             'fecha.required' => 'La fecha de la venta es obligatoria.',
             'fecha.date' => 'La fecha de la venta debe ser una fecha válida.',
@@ -73,6 +90,7 @@ class VentaRequest extends FormRequest
             'productos.*.cantidad.required' => 'La cantidad es obligatoria para cada producto.',
             'productos.*.cantidad.integer' => 'La cantidad debe ser un número entero.',
             'productos.*.cantidad.min' => 'La cantidad de cada producto debe ser al menos 1.',
+            'productos.*.con_receta.boolean' => 'El campo "con_receta" debe ser verdadero o falso.',
         ];
     }
 }

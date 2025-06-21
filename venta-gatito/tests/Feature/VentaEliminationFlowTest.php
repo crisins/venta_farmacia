@@ -3,10 +3,8 @@
 namespace Tests\Feature;
 
 use Tests\TestCase;
-use App\Models\Cliente;
 use App\Models\Usuario;
 use App\Models\Producto;
-use App\Models\Inventario;
 use App\Models\Venta;
 use App\Models\DetalleVenta;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -18,19 +16,15 @@ class VentaEliminationFlowTest extends TestCase
     /** @test */
     public function puede_eliminar_una_venta_y_revertir_stock_correctamente()
     {
-        // 1. Crear precondiciones: productos, inventario, cliente, usuario
-        $cliente = Cliente::factory()->create();
+        // 1. Crear precondiciones: productos y usuario
         $usuario = Usuario::factory()->create(['tipo' => 'usuario']);
-        $producto1 = Producto::factory()->create(['precio' => 1000, 'requiere_receta' => false]);
-        $inventario1 = Inventario::factory()->create(['producto_id' => $producto1->id, 'stock_actual' => 10]);
-        $producto2 = Producto::factory()->create(['precio' => 500, 'requiere_receta' => false]);
-        $inventario2 = Inventario::factory()->create(['producto_id' => $producto2->id, 'stock_actual' => 15]);
+        $producto1 = Producto::factory()->create(['precio' => 1000, 'requiere_receta' => false, 'stock' => 10]);
+        $producto2 = Producto::factory()->create(['precio' => 500, 'requiere_receta' => false, 'stock' => 15]);
 
         // 2. Registrar una venta para tener algo que eliminar
         // Usamos el servicio para asegurar que el stock se descuente correctamente
         $ventaService = new \App\Services\VentaService();
         $initialVentaData = [
-            'cliente_id' => $cliente->id,
             'usuario_id' => $usuario->id,
             'fecha' => '2025-06-21',
             'productos' => [
@@ -42,10 +36,10 @@ class VentaEliminationFlowTest extends TestCase
 
 
         // Asegurar que el stock se descontó inicialmente
-        $inventario1->refresh(); // Refrescar para obtener el stock actual después de la "venta"
-        $inventario2->refresh();
-        $this->assertEquals(7, $inventario1->stock_actual); // 10 - 3 = 7
-        $this->assertEquals(10, $inventario2->stock_actual); // 15 - 5 = 10
+        $producto1->refresh(); // Refrescar para obtener el stock actual después de la "venta"
+        $producto2->refresh();
+        $this->assertEquals(7, $producto1->stock); // 10 - 3 = 7
+        $this->assertEquals(10, $producto2->stock); // 15 - 5 = 10
 
         // 3. Ejecutar la acción de eliminación (DELETE a la API)
         $response = $this->deleteJson('/api/ventas/' . $venta->id);
@@ -59,10 +53,10 @@ class VentaEliminationFlowTest extends TestCase
         $this->assertDatabaseMissing('detalle_ventas', ['venta_id' => $venta->id]);
 
         // 6. Verificar que el stock se revirtió
-        $inventario1->refresh(); // Refrescar para obtener el stock después de la eliminación
-        $inventario2->refresh();
-        $this->assertEquals(10, $inventario1->stock_actual); // Debería volver a 10
-        $this->assertEquals(15, $inventario2->stock_actual); // Debería volver a 15
+        $producto1->refresh(); // Refrescar para obtener el stock después de la eliminación
+        $producto2->refresh();
+        $this->assertEquals(10, $producto1->stock); // Debería volver a 10
+        $this->assertEquals(15, $producto2->stock); // Debería volver a 15
     }
 
     /** @test */

@@ -3,16 +3,9 @@
 namespace Tests\Feature;
 
 use Tests\TestCase;
-use App\Models\Cliente;
 use App\Models\Usuario;
 use App\Models\Producto;
-use App\Models\Inventario;
 use App\Models\Proveedor;
-use App\Models\Egreso;
-use App\Models\DetalleEgreso;
-use App\Models\Venta;
-use App\Models\DetalleVenta;
-
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class EgresoVentaFlowTest extends TestCase
@@ -26,11 +19,9 @@ class EgresoVentaFlowTest extends TestCase
         $proveedor = Proveedor::factory()->create();
         $usuarioAdmin = Usuario::factory()->create(['tipo' => 'administrador']);
         $usuarioVenta = Usuario::factory()->create(['tipo' => 'usuario']);
-        $cliente = Cliente::factory()->create();
 
-        $producto = Producto::factory()->create(['precio' => 1000, 'requiere_receta' => false]);
+        $producto = Producto::factory()->create(['precio' => 1000, 'requiere_receta' => false, 'stock' => 2]);
         // Stock inicial bajo para demostrar el egreso
-        $inventario = Inventario::factory()->create(['producto_id' => $producto->id, 'stock_actual' => 2]);
 
         // 2. Registrar Egreso para AUMENTAR stock
         $egresoData = [
@@ -39,7 +30,7 @@ class EgresoVentaFlowTest extends TestCase
             'fecha' => '2025-06-20',
             'tipo' => 'entrada',
             'productos' => [
-                ['producto_id' => $producto->id, 'cantidad' => 8, 'precio_unitario' => 500] // Aumentar 8 unidades
+                ['producto_id' => $producto->id, 'cantidad' => 8, 'precio_unitario' => 500]
             ]
         ];
 
@@ -47,8 +38,8 @@ class EgresoVentaFlowTest extends TestCase
         $responseEgreso->assertStatus(201)
                        ->assertJsonFragment(['message' => 'Egreso registrado exitosamente.']);
 
-        $inventario->refresh();
-        $this->assertEquals(10, $inventario->stock_actual); // Stock debería ser 2 (inicial) + 8 (egreso) = 10
+        $producto->refresh();
+        $this->assertEquals(10, $producto->stock); // 2 + 8 = 10
         $egresoTotalEsperado = 8 * 500; // 4000
         $this->assertDatabaseHas('egresos', ['total' => $egresoTotalEsperado]);
         $egresoId = $responseEgreso->json('data.id');
@@ -63,11 +54,10 @@ class EgresoVentaFlowTest extends TestCase
 
         // 3. Registrar Venta usando el stock aumentado
         $ventaData = [
-            'cliente_id' => $cliente->id,
             'usuario_id' => $usuarioVenta->id,
             'fecha' => '2025-06-21',
             'productos' => [
-                ['producto_id' => $producto->id, 'cantidad' => 7] // Vender 7 de 10
+                ['producto_id' => $producto->id, 'cantidad' => 7]
             ]
         ];
 
@@ -76,9 +66,9 @@ class EgresoVentaFlowTest extends TestCase
                       ->assertJsonFragment(['message' => 'Venta registrada correctamente']);
 
         // 4. Verificar estado final
-        $inventario->refresh();
-        $this->assertEquals(3, $inventario->stock_actual); // Stock debería ser 10 (después de egreso) - 7 (venta) = 3
-        $ventaTotalEsperado = 7 * $producto->precio; // 7 * 1000 = 7000
+        $producto->refresh();
+        $this->assertEquals(3, $producto->stock); // 10 - 7 = 3
+        $ventaTotalEsperado = 7 * $producto->precio;
         $this->assertDatabaseHas('ventas', ['total' => $ventaTotalEsperado]);
         $ventaId = $responseVenta->json('data.id');
         $this->assertDatabaseHas('detalle_ventas', [
@@ -97,10 +87,8 @@ class EgresoVentaFlowTest extends TestCase
         $proveedor = Proveedor::factory()->create();
         $usuarioAdmin = Usuario::factory()->create(['tipo' => 'administrador']);
         $usuarioVenta = Usuario::factory()->create(['tipo' => 'usuario']);
-        $cliente = Cliente::factory()->create();
 
-        $producto = Producto::factory()->create(['precio' => 1000, 'requiere_receta' => false]);
-        $inventario = Inventario::factory()->create(['producto_id' => $producto->id, 'stock_actual' => 5]);
+        $producto = Producto::factory()->create(['precio' => 1000, 'requiere_receta' => false, 'stock' => 5]);
 
         // 2. Registrar Egreso de SALIDA que deja stock insuficiente para la venta
         $egresoData = [
@@ -109,32 +97,29 @@ class EgresoVentaFlowTest extends TestCase
             'fecha' => '2025-06-20',
             'tipo' => 'salida',
             'productos' => [
-                ['producto_id' => $producto->id, 'cantidad' => 5, 'precio_unitario' => 100] // Saca todo el stock
+                ['producto_id' => $producto->id, 'cantidad' => 5, 'precio_unitario' => 100]
             ]
         ];
 
         $responseEgreso = $this->postJson('/api/egresos', $egresoData);
-        $responseEgreso->assertStatus(201); // Egreso de salida exitoso si el stock es suficiente
+        $responseEgreso->assertStatus(201);
 
-        $inventario->refresh();
-        $this->assertEquals(0, $inventario->stock_actual); // Stock debería ser 5 - 5 = 0
+        $producto->refresh();
+        $this->assertEquals(0, $producto->stock); // 5 - 5 = 0
 
         // 3. Intentar Registrar Venta con stock insuficiente
         $ventaData = [
-            'cliente_id' => $cliente->id,
             'usuario_id' => $usuarioVenta->id,
             'fecha' => '2025-06-21',
             'productos' => [
-                ['producto_id' => $producto->id, 'cantidad' => 1] // Intenta vender 1
+                ['producto_id' => $producto->id, 'cantidad' => 1]
             ]
         ];
 
         $responseVenta = $this->postJson('/api/ventas', $ventaData);
         $responseVenta->assertStatus(422)
                       ->assertJsonValidationErrors(['productos.0.cantidad'])
-                      // <--- CORREGIDO AQUÍ: El mensaje debe coincidir exactamente
-                      ->assertJsonFragment(['Stock insuficiente para el producto ID ' . $producto->id . '. Stock actual: 0, solicitado: 1.']); 
-        // Asegurarse de que no se creó ninguna venta
+                      ->assertJsonFragment(['Stock insuficiente para el producto ID ' . $producto->id . '. Stock actual: 0, solicitado: 1.']);
         $this->assertDatabaseCount('ventas', 0);
         $this->assertDatabaseCount('detalle_ventas', 0);
     }

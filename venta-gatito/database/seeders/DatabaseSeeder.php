@@ -15,18 +15,17 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        //$this->call([
-            //UsuarioSeeder::class,
-            //ProductoSeeder::class,
-            //ProveedorSeeder::class,
-            //ProductoProveedorSeeder::class,
-            //PedidoSeeder::class,
-            //DetallePedidoSeeder::class,
-            //RecetaMedicaSeeder::class,
-            //PagoSeeder::class,
-            //EmpresaLogisticaSeeder::class,
-            //EnvioSeeder::class,
-            //AtencionClienteSeeder::class,
-        //]);
+        $this->call([
+            UsuarioSeeder::class,
+            ProductoSeeder::class,
+            ProveedorSeeder::class,
+            ProductoProveedorSeeder::class,
+            PedidoSeeder::class,
+            RecetaMedicaSeeder::class,
+            PagoSeeder::class,
+            EmpresaLogisticaSeeder::class,
+            EnvioSeeder::class,
+            AtencionClienteSeeder::class,
+        ]);
     }
 }
