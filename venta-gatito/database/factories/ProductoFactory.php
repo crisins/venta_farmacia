@@ -3,7 +3,7 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use App\Models\Producto; // Asegúrate de importar el modelo Producto
+use App\Models\Producto; 
 
 class ProductoFactory extends Factory
 {
@@ -16,15 +16,15 @@ class ProductoFactory extends Factory
             'descripcion' => $this->faker->sentence(),
             'precio' => $this->faker->randomFloat(2, 1000, 10000),
             'stock' => $this->faker->numberBetween(10, 100),
-            'requiere_receta' => false, // Por defecto, los productos NO requieren receta
+            'requiere_receta' => false, // Por defecto, los productos NO Requieren receta
             'estado' => 'activo',
             'fecha_alta' => now(),
         ];
     }
 
     /**
-     * Define un estado donde el producto NO requiere receta médica.
-     * Útil para tests donde no queremos la validación de receta.
+     * Definir un estado donde el producto no requiere receta médica.
+     * para tests donde no quieren la validación de receta.
      */
     public function noRequiereReceta(): Factory
     {
@@ -36,8 +36,8 @@ class ProductoFactory extends Factory
     }
 
     /**
-     * Define un estado donde el producto SÍ requiere receta médica.
-     * Útil para tests específicos de validación de receta.
+     * Definir un estado donde el producto SÍ requiere receta médica.
+     * para tests específicos de validación de receta.
      */
     public function requiereReceta(): Factory
     {

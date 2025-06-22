@@ -49,20 +49,12 @@ Route::post('proveedores', [ProveedorController::class, 'store']);
 Route::put('proveedores/{id}', [ProveedorController::class, 'update']);
 Route::delete('proveedores/{id}', [ProveedorController::class, 'destroy']);
 
-// **VENTAS - AHORA SIN DOBLE PREFIJO 'api'**
+// **VENTAS - SIN DOBLE PREFIJO 'api'**
 Route::post('ventas', [VentaController::class, 'store']);
 Route::delete('ventas/{id}', [VentaController::class, 'destroy']);
 Route::get('ventas', [VentaController::class, 'index']);
 Route::get('ventas/{id}', [VentaController::class, 'show']);
 Route::put('ventas/{id}', [VentaController::class, 'update']);
-
-// Eliminadas rutas y referencia a ClienteController. Usar Usuario para gestión de compradores.
-// Clientes
-// Route::get('clientes', [ClienteController::class, 'index']);
-// Route::post('clientes', [ClienteController::class, 'store']);
-// Route::get('clientes/{id}', [ClienteController::class, 'show']);
-// Route::put('clientes/{id}', [ClienteController::class, 'update']);
-// Route::delete('clientes/{id}', [ClienteController::class, 'destroy']);
 
 // Pedidos
 Route::get('pedidos', [PedidoController::class, 'index']);
@@ -83,8 +75,8 @@ Route::get('recetas_medicas/{id}', [RecetaMedicaController::class, 'show']);
 Route::post('recetas_medicas', [RecetaMedicaController::class, 'store']);
 Route::put('recetas_medicas/{id}', [RecetaMedicaController::class, 'update']);
 
-// Pagos - Si estas rutas específicas de pagos necesitan un prefijo adicional (ej. /api/pagos/id)
-// entonces mantener el prefix 'pagos' es correcto, pero debe estar directamente aquí, no anidado.
+// Pagos si estas rutas específicas de pagos necesitan un prefijo adicional ,ej: /api/pagos/id
+// entonces mantener el prefix pagos es correcto pero debe estar directamente aquí, no anidado.
 Route::prefix('pagos')->group(function() {
     Route::get('/', [PagoController::class, 'index']);
     Route::get('{id}', [PagoController::class, 'show']);

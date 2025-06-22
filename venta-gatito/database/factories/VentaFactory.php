@@ -16,7 +16,7 @@ class VentaFactory extends Factory
             'usuario_id' => Usuario::factory(), // El comprador es siempre un usuario
             'fecha' => now(),
             'total' => 0,
-            // ...otros campos si aplica
+            // ...otros campos 
         ];
     }
 }

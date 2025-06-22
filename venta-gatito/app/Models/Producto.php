@@ -16,8 +16,8 @@ class Producto extends Model
         'requiere_receta',
         'estado',
         'fecha_alta',
-        'stock', // <--- ¡Añade esta línea!
+        'stock', 
     ];
 
-    // Eliminada relación con Inventario, ya no es necesaria
+    // 
 }

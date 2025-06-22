@@ -9,7 +9,7 @@ class EgresoRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // Asume que la autorización se maneja en Middleware o directamente en el controlador
+        return true; 
     }
 
     public function rules(): array
@@ -29,7 +29,7 @@ class EgresoRequest extends FormRequest
                     if (!$producto) {
                         $fail('El producto ID ' . $value . ' no existe.');
                     }
-                    // Opcional: Validar si el producto está 'activo' para egresos
+                    // Opcional: - Validar si el producto está activo
                     // if ($producto && $producto->estado === 'inactivo') {
                     //     $fail('El producto ' . $producto->nombre . ' está inactivo y no puede ser usado en un egreso.');
                     // }

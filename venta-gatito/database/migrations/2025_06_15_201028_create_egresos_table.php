@@ -16,8 +16,8 @@ return new class extends Migration
             $table->foreignId('proveedor_id')->constrained('proveedores');
             $table->foreignId('usuario_id')->constrained('usuarios');
             $table->date('fecha');
-            // ¡Asegúrate de que esta línea esté presente y no comentada!
-            $table->string('tipo', 50); // Añade esta línea para la columna 'tipo'
+            // línea esté presente
+            $table->string('tipo', 50); // columna 'tipo'
             $table->decimal('total', 10, 2);
             $table->timestamps();
         });
