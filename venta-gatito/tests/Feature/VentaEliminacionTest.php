@@ -19,7 +19,7 @@ class VentaEliminacionTest extends TestCase
         $usuario = Usuario::factory()->create();
 
         // Crear producto con stock inicial
-        $producto = Producto::factory()->create(['precio' => 1000, 'stock' => 10, 'requiere_receta' => false]);
+        $producto = Producto::factory()->create(['precio' => 1000, 'stock' => 10]);
 
         // Crear venta con 2 unidades del producto
         $ventaService = app()->make(VentaService::class);

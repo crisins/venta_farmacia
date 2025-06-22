@@ -18,7 +18,7 @@ class VentaIntegracionTest extends TestCase
         $producto = Producto::factory()->create(['precio' => 1000, 'stock' => 10, 'requiere_receta' => false]);
         $usuario = Usuario::factory()->create();
         $data = [
-            'usuario_id' => $usuario->id, // El usuario es el comprador
+            'usuario_id' => $usuario->id,
             'fecha' => now()->toDateString(),
             'productos' => [
                 [

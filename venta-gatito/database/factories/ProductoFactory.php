@@ -16,7 +16,7 @@ class ProductoFactory extends Factory
             'descripcion' => $this->faker->sentence(),
             'precio' => $this->faker->randomFloat(2, 1000, 10000),
             'stock' => $this->faker->numberBetween(10, 100),
-            'requiere_receta' => $this->faker->boolean(), // Se mantiene para generación aleatoria general
+            'requiere_receta' => false, // Por defecto, los productos NO requieren receta
             'estado' => 'activo',
             'fecha_alta' => now(),
         ];

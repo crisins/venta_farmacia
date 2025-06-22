@@ -19,7 +19,7 @@ class DetalleVentaServiceTest extends TestCase
         $venta = Venta::factory()->create([
             'usuario_id' => $usuario->id,
         ]);
-        $producto = Producto::factory()->create(['precio' => 1000, 'stock' => 1]);
+        $producto = Producto::factory()->create(['stock' => 1]);
         $data = [
             'venta_id' => $venta->id,
             'producto_id' => $producto->id,

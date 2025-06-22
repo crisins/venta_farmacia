@@ -23,8 +23,8 @@ class VentaServiceTest extends TestCase
     public function total_se_calcula_correctamente_al_crear_venta()
     {
         $usuario = Usuario::factory()->create();
-        $producto1 = Producto::factory()->create(['precio' => 1000, 'requiere_receta' => false, 'stock' => 10]);
-        $producto2 = Producto::factory()->create(['precio' => 500, 'requiere_receta' => false, 'stock' => 10]);
+        $producto1 = Producto::factory()->noRequiereReceta()->create(['precio' => 1000, 'stock' => 10]);
+        $producto2 = Producto::factory()->noRequiereReceta()->create(['precio' => 500, 'stock' => 10]);
 
         $ventaService = new VentaService();
 
@@ -58,7 +58,7 @@ class VentaServiceTest extends TestCase
     public function stock_se_revierte_correctamente_si_falla_la_venta()
     {
         $usuario = Usuario::factory()->create();
-        $producto = Producto::factory()->create(['precio' => 1000, 'requiere_receta' => false, 'stock' => 5]);
+        $producto = Producto::factory()->noRequiereReceta()->create(['precio' => 1000, 'stock' => 5]);
         $ventaService = new VentaService();
         $data = [
             'usuario_id' => $usuario->id,
@@ -87,7 +87,7 @@ class VentaServiceTest extends TestCase
     public function eliminar_venta_revierte_stock_correctamente()
     {
         $usuario = Usuario::factory()->create();
-        $producto = Producto::factory()->create(['precio' => 100, 'requiere_receta' => false, 'stock' => 10]);
+        $producto = Producto::factory()->noRequiereReceta()->create(['precio' => 100, 'stock' => 10]);
         $ventaService = new VentaService();
         $dataVenta = [
             'usuario_id' => $usuario->id,
@@ -114,9 +114,9 @@ class VentaServiceTest extends TestCase
     public function actualizar_venta_ajusta_stock_correctamente()
     {
         $usuario = Usuario::factory()->create();
-        $producto1 = Producto::factory()->create(['precio' => 100, 'requiere_receta' => false, 'stock' => 10]);
-        $producto2 = Producto::factory()->create(['precio' => 200, 'requiere_receta' => false, 'stock' => 5]);
-        $producto3 = Producto::factory()->create(['precio' => 50, 'requiere_receta' => false, 'stock' => 20]);
+        $producto1 = Producto::factory()->noRequiereReceta()->create(['precio' => 100, 'stock' => 10]);
+        $producto2 = Producto::factory()->noRequiereReceta()->create(['precio' => 200, 'stock' => 5]);
+        $producto3 = Producto::factory()->noRequiereReceta()->create(['precio' => 50, 'stock' => 20]);
         $ventaService = new VentaService();
         $initialData = [
             'usuario_id' => $usuario->id,

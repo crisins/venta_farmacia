@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use Tests\TestCase;
-use App\Models\Producto;
 use App\Models\Usuario;
+use App\Models\Producto;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class VentaFuncionalTest extends TestCase

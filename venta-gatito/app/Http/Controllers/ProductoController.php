@@ -10,7 +10,19 @@ class ProductoController extends Controller
     // Obtener todos los productos
     public function index()
     {
-        return response()->json(Producto::all());
+        $productos = Producto::all()->map(function ($producto) {
+            return [
+                'id' => $producto->id,
+                'nombre' => $producto->nombre,
+                'descripcion' => $producto->descripcion,
+                'precio' => $producto->precio,
+                'stock' => $producto->stock,
+                'requiere_receta' => $producto->requiere_receta,
+                'estado' => $producto->estado,
+                'fecha_alta' => $producto->fecha_alta,
+            ];
+        });
+        return response()->json($productos);
     }
 
     // Obtener un producto por ID
@@ -19,7 +31,17 @@ class ProductoController extends Controller
         $producto = Producto::find($id);
 
         if ($producto) {
-            return response()->json($producto);
+            $data = [
+                'id' => $producto->id,
+                'nombre' => $producto->nombre,
+                'descripcion' => $producto->descripcion,
+                'precio' => $producto->precio,
+                'stock' => $producto->stock,
+                'requiere_receta' => $producto->requiere_receta,
+                'estado' => $producto->estado,
+                'fecha_alta' => $producto->fecha_alta,
+            ];
+            return response()->json($data);
         } else {
             return response()->json(['error' => 'Producto no encontrado'], 404);
         }

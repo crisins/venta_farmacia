@@ -68,18 +68,16 @@ class VentaController extends Controller
                 'data' => $venta
             ], 201);
 
-        } catch (InvalidArgumentException $e) { // Captura excepciones lanzadas por el servicio (ej. stock, lógica)
+        } catch (InvalidArgumentException $e) {
             return response()->json([
                 'message' => 'Error de validación o lógica de negocio: ' . $e->getMessage(),
                 'error' => $e->getMessage()
-            ], 422); // Un 422 (Unprocessable Entity) es apropiado para errores de validación de negocio.
-        } catch (\Exception $e) { // Captura cualquier otra excepción inesperada
-            // Puedes loggear el error aquí para depuración
-            // Log::error("Error inesperado en VentaController@store: " . $e->getMessage());
+            ], 422);
+        } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error inesperado al registrar venta',
                 'error' => $e->getMessage()
-            ], 500); // Un 500 (Internal Server Error) para errores no controlados.
+            ], 500);
         }
     }
 
@@ -90,7 +88,6 @@ class VentaController extends Controller
             if (!$venta) {
                 return response()->json(['message' => 'Venta no encontrada'], 404);
             }
-            // Formatear la respuesta para que sea más ordenada y legible
             $ventaFormateada = [
                 'id' => $venta->id,
                 'fecha' => $venta->fecha,
@@ -143,13 +140,12 @@ class VentaController extends Controller
                 'message' => 'Venta actualizada correctamente',
                 'data' => $venta
             ]);
-        } catch (InvalidArgumentException $e) { // Captura excepciones de lógica de negocio del servicio
+        } catch (InvalidArgumentException $e) {
             return response()->json([
                 'message' => 'Error en la actualización de la venta: ' . $e->getMessage(),
                 'error' => $e->getMessage()
             ], 422);
         } catch (\Exception $e) {
-            // Log::error("Error inesperado en VentaController@update: " . $e->getMessage());
             return response()->json([
                 'message' => 'Error inesperado al actualizar venta',
                 'error' => $e->getMessage()
@@ -159,7 +155,6 @@ class VentaController extends Controller
 
     public function destroy($id): JsonResponse
     {
-        // Se mantiene el try-catch original para destroy, ya que el servicio no lanza InvalidArgumentException aquí.
         try {
             $success = $this->ventaService->eliminarVenta($id);
 
@@ -173,7 +168,7 @@ class VentaController extends Controller
             return response()->json([
                 'message' => 'Error al eliminar venta',
                 'error' => $e->getMessage()
-            ], 400); // Mantenemos 400 como en tu implementación anterior.
+            ], 400);
         }
     }
 }

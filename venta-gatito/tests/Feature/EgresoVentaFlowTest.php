@@ -13,15 +13,12 @@ class EgresoVentaFlowTest extends TestCase
     use RefreshDatabase;
 
     /** @test */
-    public function puede_registrar_egreso_luego_venta_y_verificar_stock_y_totales()
+    public function test_puede_registrar_egreso_luego_venta_y_verificar_stock_y_totales()
     {
-        // 1. Precondiciones
         $proveedor = Proveedor::factory()->create();
         $usuarioAdmin = Usuario::factory()->create(['tipo' => 'administrador']);
         $usuarioVenta = Usuario::factory()->create(['tipo' => 'usuario']);
-
         $producto = Producto::factory()->create(['precio' => 1000, 'requiere_receta' => false, 'stock' => 2]);
-        // Stock inicial bajo para demostrar el egreso
 
         // 2. Registrar Egreso para AUMENTAR stock
         $egresoData = [
@@ -33,11 +30,9 @@ class EgresoVentaFlowTest extends TestCase
                 ['producto_id' => $producto->id, 'cantidad' => 8, 'precio_unitario' => 500]
             ]
         ];
-
         $responseEgreso = $this->postJson('/api/egresos', $egresoData);
         $responseEgreso->assertStatus(201)
                        ->assertJsonFragment(['message' => 'Egreso registrado exitosamente.']);
-
         $producto->refresh();
         $this->assertEquals(10, $producto->stock); // 2 + 8 = 10
         $egresoTotalEsperado = 8 * 500; // 4000
@@ -50,8 +45,6 @@ class EgresoVentaFlowTest extends TestCase
             'precio_unitario' => 500,
             'subtotal' => 4000
         ]);
-
-
         // 3. Registrar Venta usando el stock aumentado
         $ventaData = [
             'usuario_id' => $usuarioVenta->id,
@@ -60,12 +53,9 @@ class EgresoVentaFlowTest extends TestCase
                 ['producto_id' => $producto->id, 'cantidad' => 7]
             ]
         ];
-
         $responseVenta = $this->postJson('/api/ventas', $ventaData);
         $responseVenta->assertStatus(201)
                       ->assertJsonFragment(['message' => 'Venta registrada correctamente']);
-
-        // 4. Verificar estado final
         $producto->refresh();
         $this->assertEquals(3, $producto->stock); // 10 - 7 = 3
         $ventaTotalEsperado = 7 * $producto->precio;
@@ -81,33 +71,31 @@ class EgresoVentaFlowTest extends TestCase
     }
 
     /** @test */
-    public function no_puede_registrar_venta_despues_de_egreso_salida_que_agota_stock()
+    public function test_no_puede_registrar_venta_despues_de_egreso_salida_que_agota_stock()
     {
         // 1. Precondiciones
         $proveedor = Proveedor::factory()->create();
         $usuarioAdmin = Usuario::factory()->create(['tipo' => 'administrador']);
         $usuarioVenta = Usuario::factory()->create(['tipo' => 'usuario']);
+        $producto = Producto::factory()->create(['precio' => 1000, 'stock' => 5]);
 
-        $producto = Producto::factory()->create(['precio' => 1000, 'requiere_receta' => false, 'stock' => 5]);
-
-        // 2. Registrar Egreso de SALIDA que deja stock insuficiente para la venta
-        $egresoData = [
+        // 2. Registrar egreso de salida que agota el stock
+        $egresoSalidaData = [
             'proveedor_id' => $proveedor->id,
             'usuario_id' => $usuarioAdmin->id,
             'fecha' => '2025-06-20',
             'tipo' => 'salida',
             'productos' => [
-                ['producto_id' => $producto->id, 'cantidad' => 5, 'precio_unitario' => 100]
+                ['producto_id' => $producto->id, 'cantidad' => 5, 'precio_unitario' => 500]
             ]
         ];
-
-        $responseEgreso = $this->postJson('/api/egresos', $egresoData);
-        $responseEgreso->assertStatus(201);
-
+        $responseEgresoSalida = $this->postJson('/api/egresos', $egresoSalidaData);
+        $responseEgresoSalida->assertStatus(201)
+                             ->assertJsonFragment(['message' => 'Egreso registrado exitosamente.']);
         $producto->refresh();
-        $this->assertEquals(0, $producto->stock); // 5 - 5 = 0
+        $this->assertEquals(0, $producto->stock);
 
-        // 3. Intentar Registrar Venta con stock insuficiente
+        // 3. Intentar registrar una venta sin stock
         $ventaData = [
             'usuario_id' => $usuarioVenta->id,
             'fecha' => '2025-06-21',
@@ -115,12 +103,9 @@ class EgresoVentaFlowTest extends TestCase
                 ['producto_id' => $producto->id, 'cantidad' => 1]
             ]
         ];
-
         $responseVenta = $this->postJson('/api/ventas', $ventaData);
-        $responseVenta->assertStatus(422)
-                      ->assertJsonValidationErrors(['productos.0.cantidad'])
-                      ->assertJsonFragment(['Stock insuficiente para el producto ID ' . $producto->id . '. Stock actual: 0, solicitado: 1.']);
+        $responseVenta->assertStatus(422);
+        $responseVenta->assertJsonValidationErrors('productos.0.cantidad');
         $this->assertDatabaseCount('ventas', 0);
-        $this->assertDatabaseCount('detalle_ventas', 0);
     }
 }

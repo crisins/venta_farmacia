@@ -3,14 +3,13 @@
 namespace App\Services;
 
 use App\Models\DetalleVenta;
-use App\Models\Producto;
 use App\Models\Venta;
 
 class DetalleVentaService
 {
     public function crearDetalle(array $data): ?DetalleVenta
     {
-        $producto = Producto::find($data['producto_id']);
+        $producto = \App\Models\Producto::find($data['producto_id']);
         if (!$producto) {
             throw new \Exception("Producto no encontrado.");
         }
@@ -22,11 +21,11 @@ class DetalleVentaService
         $producto->stock -= $data['cantidad'];
         $producto->save();
         $detalle = DetalleVenta::create([
-            'venta_id'        => $data['venta_id'],
-            'producto_id'     => $data['producto_id'],
-            'cantidad'        => $data['cantidad'],
+            'venta_id' => $data['venta_id'],
+            'producto_id' => $data['producto_id'],
+            'cantidad' => $data['cantidad'],
             'precio_unitario' => $precio_unitario,
-            'subtotal'        => $subtotal,
+            'subtotal' => $subtotal,
         ]);
         $venta = Venta::find($data['venta_id']);
         if ($venta) {
@@ -38,7 +37,7 @@ class DetalleVentaService
 
     public function obtenerTodos()
     {
-        return DetalleVenta::orderBy('id', 'desc')->get();
+        return DetalleVenta::with(['venta', 'producto'])->get();
     }
 
     public function obtenerPorId($id)
@@ -52,12 +51,12 @@ class DetalleVentaService
         if (!$detalle) {
             return null;
         }
-        $productoAnterior = Producto::find($detalle->producto_id);
+        $productoAnterior = \App\Models\Producto::find($detalle->producto_id);
         if ($productoAnterior) {
             $productoAnterior->stock += $detalle->cantidad;
             $productoAnterior->save();
         }
-        $productoNuevo = Producto::find($data['producto_id']);
+        $productoNuevo = \App\Models\Producto::find($data['producto_id']);
         if (!$productoNuevo) {
             throw new \Exception("Producto no encontrado.");
         }
@@ -69,10 +68,10 @@ class DetalleVentaService
         $productoNuevo->stock -= $data['cantidad'];
         $productoNuevo->save();
         $detalle->update([
-            'producto_id'     => $data['producto_id'],
-            'cantidad'        => $data['cantidad'],
+            'producto_id' => $data['producto_id'],
+            'cantidad' => $data['cantidad'],
             'precio_unitario' => $nuevoPrecio,
-            'subtotal'        => $nuevoSubtotal,
+            'subtotal' => $nuevoSubtotal,
         ]);
         return $detalle;
     }
@@ -83,19 +82,12 @@ class DetalleVentaService
         if (!$detalle) {
             return false;
         }
-        $producto = Producto::find($detalle->producto_id);
+        $producto = \App\Models\Producto::find($detalle->producto_id);
         if ($producto) {
             $producto->stock += $detalle->cantidad;
             $producto->save();
         }
-        $ventaId = $detalle->venta_id;
         $detalle->delete();
-        $venta = Venta::find($ventaId);
-        if ($venta) {
-            $nuevoTotal = $venta->detalles()->sum('subtotal');
-            $venta->total = $nuevoTotal;
-            $venta->save();
-        }
         return true;
     }
 }

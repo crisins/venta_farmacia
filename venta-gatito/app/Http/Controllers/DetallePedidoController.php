@@ -10,14 +10,14 @@ class DetallePedidoController extends Controller
     // Listar todos los detalles de pedido
     public function index()
     {
-        $detalles = DetallePedido::with(['pedido', 'producto'])->get();
+        $detalles = DetallePedido::with(['pedido', 'productoProveedor'])->get();
         return response()->json($detalles);
     }
 
     // Mostrar un detalle de pedido específico
     public function show($id)
     {
-        $detalle = DetallePedido::with(['pedido', 'producto'])->find($id);
+        $detalle = DetallePedido::with(['pedido', 'productoProveedor'])->find($id);
         if ($detalle) {
             return response()->json($detalle);
         } else {
@@ -30,7 +30,7 @@ class DetallePedidoController extends Controller
     {
         $request->validate([
             'pedido_id' => 'required|exists:pedidos,id',
-            'producto_id' => 'required|exists:productos,id',
+            'producto_proveedor_id' => 'required|exists:productos_proveedores,id',
             'cantidad' => 'required|integer|min:1',
             'precio_unit' => 'required|numeric|min:0',
         ]);
@@ -44,7 +44,7 @@ class DetallePedidoController extends Controller
     {
         $request->validate([
             'pedido_id' => 'required|exists:pedidos,id',
-            'producto_id' => 'required|exists:productos,id',
+            'producto_proveedor_id' => 'required|exists:productos_proveedores,id',
             'cantidad' => 'required|integer|min:1',
             'precio_unit' => 'required|numeric|min:0',
         ]);

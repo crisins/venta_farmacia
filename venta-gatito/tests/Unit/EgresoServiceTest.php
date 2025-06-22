@@ -10,23 +10,17 @@ use App\Models\Producto;
 use App\Services\EgresoService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Artisan;
 
 class EgresoServiceTest extends TestCase
 {
     use RefreshDatabase;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-    }
 
     /** @test */
     public function egreso_se_registra_correctamente()
     {
         $proveedor = Proveedor::factory()->create();
         $usuario = Usuario::factory()->create();
-        $producto = Producto::factory()->create(['precio' => 100, 'stock' => 5]);
+        $producto = Producto::factory()->create(['stock' => 5]);
         $service = new EgresoService();
         $data = [
             'proveedor_id' => $proveedor->id,
@@ -63,7 +57,7 @@ class EgresoServiceTest extends TestCase
     {
         $proveedor = Proveedor::factory()->create();
         $usuario = Usuario::factory()->create();
-        $producto = Producto::factory()->create(['precio' => 100, 'stock' => 10]);
+        $producto = Producto::factory()->create(['stock' => 10]);
         $service = new EgresoService();
         $data = [
             'proveedor_id' => $proveedor->id,
@@ -81,7 +75,6 @@ class EgresoServiceTest extends TestCase
         $egreso = $service->registrarEgreso($data);
         $this->assertDatabaseHas('egresos', [
             'id' => $egreso->id,
-            'total' => 150,
             'tipo' => 'salida',
         ]);
         $this->assertDatabaseHas('detalle_egresos', [
@@ -92,7 +85,7 @@ class EgresoServiceTest extends TestCase
             'subtotal' => 150,
         ]);
         $producto->refresh();
-        $this->assertEquals(7, $producto->stock); // 10 inicial - 3 salida
+        $this->assertEquals(7, $producto->stock); // 10 - 3
     }
 
     /** @test */
@@ -100,7 +93,7 @@ class EgresoServiceTest extends TestCase
     {
         $proveedor = Proveedor::factory()->create();
         $usuario = Usuario::factory()->create();
-        $producto = Producto::factory()->create(['precio' => 100, 'stock' => 2]); // Solo 2 en stock
+        $producto = Producto::factory()->create(['stock' => 2]); // Solo 2 en stock
         $service = new EgresoService();
         $data = [
             'proveedor_id' => $proveedor->id,

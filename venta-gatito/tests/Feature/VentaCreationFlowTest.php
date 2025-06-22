@@ -5,9 +5,6 @@ namespace Tests\Feature;
 use Tests\TestCase;
 use App\Models\Usuario;
 use App\Models\Producto;
-use App\Models\Venta;
-use App\Models\DetalleVenta;
-
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class VentaCreationFlowTest extends TestCase
@@ -19,8 +16,8 @@ class VentaCreationFlowTest extends TestCase
     {
         // 1. Crear precondiciones
         $usuario = Usuario::factory()->create(['tipo' => 'usuario']);
-        $producto1 = Producto::factory()->create(['precio' => 1000, 'requiere_receta' => false, 'stock' => 10]);
-        $producto2 = Producto::factory()->create(['precio' => 500, 'requiere_receta' => false, 'stock' => 15]);
+        $producto1 = Producto::factory()->create(['precio' => 1000, 'stock' => 10, 'requiere_receta' => false]);
+        $producto2 = Producto::factory()->create(['precio' => 500, 'stock' => 15, 'requiere_receta' => false]);
 
         $requestData = [
             'usuario_id' => $usuario->id,

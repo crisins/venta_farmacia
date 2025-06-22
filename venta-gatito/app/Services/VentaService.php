@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Venta;
 use App\Models\DetalleVenta;
-use App\Models\Producto;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -23,41 +22,31 @@ class VentaService
                 'fecha' => $data['fecha'],
                 'total' => 0,
             ]);
-
             $totalVenta = 0;
-
             foreach ($data['productos'] as $productoData) {
-                $producto = Producto::find($productoData['producto_id']);
-
+                $producto = \App\Models\Producto::find($productoData['producto_id']);
                 if (!$producto) {
                     throw new InvalidArgumentException("Producto no encontrado para ID: {$productoData['producto_id']}.");
                 }
-
                 if ($producto->requiere_receta && (empty($productoData['con_receta']) || $productoData['con_receta'] !== true)) {
                     throw new InvalidArgumentException('El producto requiere receta médica.');
                 }
-
                 if ($producto->stock < $productoData['cantidad']) {
                     throw new InvalidArgumentException("Stock insuficiente para el producto ID {$producto->id}. Disponible: {$producto->stock}.");
                 }
-
                 $subtotal = $productoData['cantidad'] * $producto->precio;
                 $totalVenta += $subtotal;
-
-                DetalleVenta::create([
+                \App\Models\DetalleVenta::create([
                     'venta_id' => $venta->id,
                     'producto_id' => $producto->id,
                     'cantidad' => $productoData['cantidad'],
                     'precio_unitario' => $producto->precio,
                     'subtotal' => $subtotal,
                 ]);
-
                 $producto->stock -= $productoData['cantidad'];
                 $producto->save();
             }
-
             $venta->update(['total' => $totalVenta]);
-
             return $venta->fresh(['detalles.producto', 'usuario']);
         });
     }
@@ -69,18 +58,19 @@ class VentaService
             if (!$venta) {
                 return null;
             }
-
             $existingDetails = $venta->detalles;
             $productosAConservar = [];
             $newTotal = 0;
-
             foreach ($data['productos'] as $item) {
                 $productoId = $item['producto_id'];
                 $cantidadNueva = $item['cantidad'];
                 $detalleExistente = $existingDetails->where('producto_id', $productoId)->first();
-                $producto = Producto::find($productoId);
+                $producto = \App\Models\Producto::find($productoId);
                 if (!$producto) {
                     throw new InvalidArgumentException("Producto no encontrado para ID: {$productoId}.");
+                }
+                if ($producto->requiere_receta && (empty($item['con_receta']) || $item['con_receta'] !== true)) {
+                    throw new InvalidArgumentException('El producto requiere receta médica.');
                 }
                 if ($detalleExistente) {
                     $diferencia = $cantidadNueva - $detalleExistente->cantidad;
@@ -102,7 +92,7 @@ class VentaService
                     }
                     $producto->stock -= $cantidadNueva;
                     $producto->save();
-                    $nuevoDetalle = DetalleVenta::create([
+                    $nuevoDetalle = \App\Models\DetalleVenta::create([
                         'venta_id' => $venta->id,
                         'producto_id' => $productoId,
                         'cantidad' => $cantidadNueva,
@@ -112,10 +102,9 @@ class VentaService
                     $newTotal += $nuevoDetalle->subtotal;
                 }
             }
-
             foreach ($existingDetails as $detalle) {
                 if (!in_array($detalle->producto_id, $productosAConservar)) {
-                    $producto = Producto::find($detalle->producto_id);
+                    $producto = \App\Models\Producto::find($detalle->producto_id);
                     if ($producto) {
                         $producto->stock += $detalle->cantidad;
                         $producto->save();
@@ -123,13 +112,11 @@ class VentaService
                     $detalle->delete();
                 }
             }
-
             $venta->update([
                 'usuario_id' => $data['usuario_id'] ?? $venta->usuario_id,
                 'fecha' => $data['fecha'] ?? $venta->fecha,
                 'total' => $newTotal,
             ]);
-
             return $venta->fresh(['detalles.producto', 'usuario']);
         });
     }
@@ -141,15 +128,13 @@ class VentaService
             if (!$venta) {
                 return false;
             }
-
             foreach ($venta->detalles as $detalle) {
-                $producto = Producto::find($detalle->producto_id);
+                $producto = \App\Models\Producto::find($detalle->producto_id);
                 if ($producto) {
                     $producto->stock += $detalle->cantidad;
                     $producto->save();
                 }
             }
-
             $venta->detalles()->delete();
             $venta->delete();
             return true;
