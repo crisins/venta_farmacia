@@ -11,16 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('productos_proveedores', function (Blueprint $table) {
+        Schema::create('producto_proveedor', function (Blueprint $table) {
             $table->id();
             $table->foreignId('producto_id')->constrained('productos')->onDelete('cascade');
             $table->foreignId('proveedor_id')->constrained('proveedores')->onDelete('cascade');
             $table->decimal('precio_compra', 10, 2);
             $table->integer('stock_disponible');
             $table->integer('tiempo_entrega_dias');
+            $table->boolean('activo')->default(true); // Para poder desactivar la relación
             $table->timestamps();
         });
-        
     }
 
     /**

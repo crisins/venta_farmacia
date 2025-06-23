@@ -22,9 +22,9 @@ class DetalleVentaRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'venta_id'        => 'required|exists:ventas,id',
-            'producto_id'     => 'required|exists:productos,id',
-            'cantidad'        => 'required|integer|min:1',
+            'venta_id'              => 'required|exists:ventas,id',
+            'producto_proveedor_id' => 'required|exists:productos_proveedores,id',
+            'cantidad'              => 'required|integer|min:1',
         ];
     }
 }

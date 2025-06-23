@@ -10,10 +10,12 @@ class CreateUsuariosTable extends Migration
     {
         Schema::create('usuarios', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('nombre');
             $table->string('email')->unique();
             $table->string('password');
-            $table->string('rol'); // Aquí agregas la columna 'rol'
+            $table->string('tipo');
+            $table->string('telefono');
+            $table->string('direccion'); 
             $table->timestamps();
         });
     }
@@ -23,4 +25,3 @@ class CreateUsuariosTable extends Migration
         Schema::dropIfExists('usuarios');
     }
 }
-

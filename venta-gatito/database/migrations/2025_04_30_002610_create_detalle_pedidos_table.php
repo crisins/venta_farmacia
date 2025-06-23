@@ -19,7 +19,6 @@ return new class extends Migration
             $table->decimal('precio_unit', 10, 2);
             $table->timestamps();
         });
-        
     }
 
     /**

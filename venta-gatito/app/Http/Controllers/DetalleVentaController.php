@@ -26,7 +26,7 @@ class DetalleVentaController extends Controller
             return response()->json([
                 'message' => 'Error al crear detalle de venta',
                 'error' => $e->getMessage()
-            ], 400);
+            ], 422);
         }
     }
 

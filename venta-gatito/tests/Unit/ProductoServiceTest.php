@@ -22,6 +22,6 @@ class ProductoServiceTest extends TestCase
             'id' => $producto->id,
         ]);
 
-        $this->assertNull(Producto::find($producto->id));
+        $this->assertNull(\App\Models\Producto::find($producto->id));
     }
 }

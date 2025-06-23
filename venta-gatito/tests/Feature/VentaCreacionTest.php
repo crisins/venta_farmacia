@@ -4,10 +4,8 @@ namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
-use App\Models\Cliente;
 use App\Models\Usuario;
 use App\Models\Producto;
-use App\Models\Inventario;
 
 class VentaCreacionTest extends TestCase
 {
@@ -16,18 +14,13 @@ class VentaCreacionTest extends TestCase
     public function test_crear_venta_con_datos_validos()
     {
         // 1. Crear datos necesarios
-        $cliente = Cliente::factory()->create();
         $usuario = Usuario::factory()->administrador()->create();
 
-        // Crear inventario y producto asociado
-        $inventario = Inventario::factory()->create([
-            'stock_actual' => 10
-        ]);
-        $producto = $inventario->producto;
+        // Crear un producto que explícitamente NO requiere receta para este test de datos válidos.
+        $producto = Producto::factory()->noRequiereReceta()->create(['stock' => 10]);
 
         // 2. Armar los datos de la venta
         $ventaData = [
-            'cliente_id' => $cliente->id,
             'usuario_id' => $usuario->id,
             'fecha' => now()->toDateString(),
             'productos' => [
@@ -40,15 +33,15 @@ class VentaCreacionTest extends TestCase
 
         // 3. Enviar la petición POST
         $response = $this->postJson('/api/ventas', $ventaData);
-        dump($response->json());
+        dump($response->json()); // Muestra la respuesta en la consola del test
 
         // 4. Verificar respuesta
-        $response->assertStatus(201);
+        $response->assertStatus(201); // Ahora este assert debería pasar
         $response->assertJsonStructure([
             'message',
             'data' => [
                 'id',
-                'cliente',
+                'usuario_id',
                 'total',
                 'fecha',
                 'detalles' => [
@@ -63,9 +56,7 @@ class VentaCreacionTest extends TestCase
         ]);
 
         // 5. Verificar que el stock se haya descontado correctamente
-        $this->assertDatabaseHas('inventarios', [
-            'producto_id' => $producto->id,
-            'stock_actual' => 7
-        ]);
+        $producto->refresh();
+        $this->assertEquals(7, $producto->stock);
     }
 }
