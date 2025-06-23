@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Models\DetalleEgreso;
 use App\Models\Egreso;
-use App\Models\Producto;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class DetalleEgresoFactory extends Factory
@@ -18,7 +17,7 @@ class DetalleEgresoFactory extends Factory
 
         return [
             'egreso_id' => Egreso::factory(),
-            'producto_id' => Producto::factory(),
+            'producto_id' => \App\Models\Producto::factory(),
             'cantidad' => $cantidad,
             'precio_unitario' => $precio,
             'subtotal' => $cantidad * $precio,

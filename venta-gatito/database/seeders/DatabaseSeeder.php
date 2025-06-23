@@ -21,7 +21,6 @@ class DatabaseSeeder extends Seeder
             ProveedorSeeder::class,
             ProductoProveedorSeeder::class,
             PedidoSeeder::class,
-            DetallePedidoSeeder::class,
             RecetaMedicaSeeder::class,
             PagoSeeder::class,
             EmpresaLogisticaSeeder::class,

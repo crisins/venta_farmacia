@@ -7,75 +7,63 @@ use App\Models\DetallePedido;
 
 class DetallePedidoController extends Controller
 {
+    // Listar todos los detalles de pedido
     public function index()
-{
-    $detalles = DetallePedido::with(['pedido.usuario', 'producto'])->get();
-    return response()->json($detalles);
-}
+    {
+        $detalles = DetallePedido::with(['pedido', 'productoProveedor'])->get();
+        return response()->json($detalles);
+    }
 
-
+    // Mostrar un detalle de pedido específico
     public function show($id)
     {
-        $detallePedido = DetallePedido::find($id);
-        if ($detallePedido) {
-            return response()->json($detallePedido);
+        $detalle = DetallePedido::with(['pedido', 'productoProveedor'])->find($id);
+        if ($detalle) {
+            return response()->json($detalle);
         } else {
             return response()->json(['error' => 'Detalle del pedido no encontrado'], 404);
         }
     }
 
+    // Crear un nuevo detalle de pedido
     public function store(Request $request)
     {
         $request->validate([
-            'pedido_id' => 'required|exists:pedidos,id',  // El pedido debe existir
-            'producto_id' => 'required|exists:productos,id',  // El producto debe existir
-            'cantidad' => 'required|integer|min:1',  // La cantidad debe ser un número entero mayor que 0
-            'precio_unit' => 'required|numeric|min:0',  // El precio unitario debe ser un número mayor o igual a 0
+            'pedido_id' => 'required|exists:pedidos,id',
+            'producto_proveedor_id' => 'required|exists:productos_proveedores,id',
+            'cantidad' => 'required|integer|min:1',
+            'precio_unit' => 'required|numeric|min:0',
         ]);
 
-        $detallePedido = DetallePedido::create([
-            'pedido_id' => $request->pedido_id,
-            'producto_id' => $request->producto_id,
-            'cantidad' => $request->cantidad,
-            'precio_unit' => $request->precio_unit,
-        ]);
-
-        return response()->json($detallePedido, 201);
+        $detalle = DetallePedido::create($request->all());
+        return response()->json($detalle, 201);
     }
 
+    // Actualizar un detalle de pedido
     public function update(Request $request, $id)
     {
         $request->validate([
-            'pedido_id' => 'required|exists:pedidos,id',  // El pedido debe existir
-            'producto_id' => 'required|exists:productos,id',  // El producto debe existir
-            'cantidad' => 'required|integer|min:1',  // La cantidad debe ser un número entero mayor que 0
-            'precio_unit' => 'required|numeric|min:0',  // El precio unitario debe ser un número mayor o igual a 0
+            'pedido_id' => 'required|exists:pedidos,id',
+            'producto_proveedor_id' => 'required|exists:productos_proveedores,id',
+            'cantidad' => 'required|integer|min:1',
+            'precio_unit' => 'required|numeric|min:0',
         ]);
 
-        $detallePedido = DetallePedido::find($id);
-
-        if ($detallePedido) {
-            $detallePedido->update([
-                'pedido_id' => $request->pedido_id,
-                'producto_id' => $request->producto_id,
-                'cantidad' => $request->cantidad,
-                'precio_unit' => $request->precio_unit,
-            ]);
-
-            return response()->json($detallePedido);
+        $detalle = DetallePedido::find($id);
+        if ($detalle) {
+            $detalle->update($request->all());
+            return response()->json($detalle);
         } else {
             return response()->json(['error' => 'Detalle del pedido no encontrado'], 404);
         }
     }
 
+    // Eliminar un detalle de pedido
     public function destroy($id)
     {
-
-        $detallePedido = DetallePedido::find($id);
-
-        if ($detallePedido) {
-            $detallePedido->delete();
-
+        $detalle = DetallePedido::find($id);
+        if ($detalle) {
+            $detalle->delete();
             return response()->json(['message' => 'Detalle del pedido eliminado']);
         } else {
             return response()->json(['error' => 'Detalle del pedido no encontrado'], 404);

@@ -3,9 +3,8 @@
 namespace Tests\Feature;
 
 use Tests\TestCase;
-use App\Models\Producto;
-use App\Models\Cliente;
 use App\Models\Usuario;
+use App\Models\Producto;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class VentaFuncionalTest extends TestCase
@@ -20,13 +19,11 @@ class VentaFuncionalTest extends TestCase
             'stock' => 5, // stock bajo para forzar error
         ]);
 
-        // Crear cliente y usuario válidos
-        $cliente = Cliente::factory()->create();
+        // Crear usuario válido
         $usuario = Usuario::factory()->create();
 
         // Datos de la venta con cantidad mayor al stock disponible
         $datosVenta = [
-            'cliente_id' => $cliente->id,
             'usuario_id' => $usuario->id,
             'fecha' => date('Y-m-d'),
             'productos' => [

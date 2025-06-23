@@ -3,10 +3,10 @@
 namespace Tests\Unit;
 
 use Tests\TestCase;
-use App\Models\Producto;
-use App\Models\Inventario;
+use App\Models\Egreso;
 use App\Models\Proveedor;
 use App\Models\Usuario;
+use App\Models\Producto;
 use App\Services\EgresoService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -15,67 +15,103 @@ class EgresoServiceTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_egreso_actualiza_stock_y_total()
+    /** @test */
+    public function egreso_se_registra_correctamente()
     {
-        $producto = Producto::factory()->create();
         $proveedor = Proveedor::factory()->create();
         $usuario = Usuario::factory()->create();
-
-        Inventario::factory()->create([
-            'producto_id' => $producto->id,
-            'stock_actual' => 0
-        ]);
-
+        $producto = Producto::factory()->create(['stock' => 5]);
+        $service = new EgresoService();
         $data = [
             'proveedor_id' => $proveedor->id,
             'usuario_id' => $usuario->id,
-            'fecha' => now()->toDateString(),
+            'fecha' => '2023-01-01',
+            'tipo' => 'entrada',
             'productos' => [
                 [
                     'producto_id' => $producto->id,
-                    'cantidad' => 5,
-                    'precio_unitario' => 1000
-                ]
-            ]
+                    'cantidad' => 10,
+                    'precio_unitario' => 50,
+                ],
+            ],
         ];
-
-        $service = new EgresoService();
         $egreso = $service->registrarEgreso($data);
-
-        $inventario = Inventario::where('producto_id', $producto->id)->first();
-
-        $this->assertEquals(5000, $egreso->total);
-        $this->assertEquals(5, $inventario->stock_actual);
+        $this->assertDatabaseHas('egresos', [
+            'id' => $egreso->id,
+            'total' => 500,
+            'tipo' => 'entrada',
+        ]);
+        $this->assertDatabaseHas('detalle_egresos', [
+            'egreso_id' => $egreso->id,
+            'producto_id' => $producto->id,
+            'cantidad' => 10,
+            'precio_unitario' => 50,
+            'subtotal' => 500,
+        ]);
+        $producto->refresh();
+        $this->assertEquals(15, $producto->stock); // 5 inicial + 10 entrada
     }
 
-    public function test_egreso_rechaza_cantidad_invalida()
+    /** @test */
+    public function egreso_de_salida_reduce_stock_correctamente()
     {
-        $this->expectException(ValidationException::class);
-
-        $producto = Producto::factory()->create();
         $proveedor = Proveedor::factory()->create();
         $usuario = Usuario::factory()->create();
-
-        Inventario::factory()->create([
-            'producto_id' => $producto->id,
-            'stock_actual' => 0
-        ]);
-
+        $producto = Producto::factory()->create(['stock' => 10]);
+        $service = new EgresoService();
         $data = [
             'proveedor_id' => $proveedor->id,
             'usuario_id' => $usuario->id,
-            'fecha' => now()->toDateString(),
+            'fecha' => '2023-01-02',
+            'tipo' => 'salida',
             'productos' => [
                 [
                     'producto_id' => $producto->id,
-                    'cantidad' => -3,  // cantidad inválida
-                    'precio_unitario' => 1000
-                ]
-            ]
+                    'cantidad' => 3,
+                    'precio_unitario' => 50,
+                ],
+            ],
         ];
+        $egreso = $service->registrarEgreso($data);
+        $this->assertDatabaseHas('egresos', [
+            'id' => $egreso->id,
+            'tipo' => 'salida',
+        ]);
+        $this->assertDatabaseHas('detalle_egresos', [
+            'egreso_id' => $egreso->id,
+            'producto_id' => $producto->id,
+            'cantidad' => 3,
+            'precio_unitario' => 50,
+            'subtotal' => 150,
+        ]);
+        $producto->refresh();
+        $this->assertEquals(7, $producto->stock); // 10 - 3
+    }
 
+    /** @test */
+    public function no_puede_registrar_egreso_con_stock_insuficiente_en_salida()
+    {
+        $proveedor = Proveedor::factory()->create();
+        $usuario = Usuario::factory()->create();
+        $producto = Producto::factory()->create(['stock' => 2]); // Solo 2 en stock
         $service = new EgresoService();
+        $data = [
+            'proveedor_id' => $proveedor->id,
+            'usuario_id' => $usuario->id,
+            'fecha' => '2023-01-03',
+            'tipo' => 'salida',
+            'productos' => [
+                [
+                    'producto_id' => $producto->id,
+                    'cantidad' => 5, // Intenta sacar 5
+                    'precio_unitario' => 50,
+                ],
+            ],
+        ];
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Stock insuficiente para la salida del producto ID ' . $producto->id);
         $service->registrarEgreso($data);
+        $producto->refresh();
+        $this->assertEquals(2, $producto->stock); // Stock no cambió
     }
 }
-
