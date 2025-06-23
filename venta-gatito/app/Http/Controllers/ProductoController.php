@@ -23,7 +23,15 @@ class ProductoController extends Controller
             ];
         });
         return response()->json($productos);
+
+        return response()->json([
+        'base_path' => database_path(),
+        'db_exists' => file_exists(database_path()),
+    ]);
+        
     }
+
+
 
     // Obtener un producto por ID
     public function show($id)
@@ -49,7 +57,8 @@ class ProductoController extends Controller
 
     // Crear un nuevo producto
     public function store(Request $request)
-    {
+{
+    try {
         $producto = Producto::create([
             'nombre' => $request->nombre,
             'descripcion' => $request->descripcion,
@@ -61,7 +70,13 @@ class ProductoController extends Controller
         ]);
 
         return response()->json($producto, 201);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+        ], 500);
     }
+}
+// Removed duplicate index() method to resolve redeclaration error.
 
     // Actualizar un producto
     public function update(Request $request, $id)
