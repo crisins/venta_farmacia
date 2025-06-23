@@ -2,7 +2,9 @@
 FROM php:8.2-apache
 
 # Habilita extensiones necesarias (SQLite, pdo, etc.)
-RUN docker-php-ext-install pdo pdo_sqlite
+RUN apt-get update && apt-get install -y libsqlite3-dev && \
+    docker-php-ext-install pdo pdo_sqlite
+
 
 # Copia los archivos del proyecto al contenedor
 COPY . /var/www/html/
