@@ -3,7 +3,7 @@ services:
     name: venta-farmacia
     env: docker
     plan: free
-    repo: https://github.com/crisins/venta_farmacia
-    region: oregon
     branch: main
     dockerfilePath: Dockerfile
+    buildCommand: ""
+    startCommand: ""
