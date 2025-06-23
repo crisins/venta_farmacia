@@ -1,10 +1,9 @@
-# Imagen base con PHP 8.2 y Apache
+# Imagen base
 FROM php:8.2-apache
 
-# Habilita extensiones necesarias (SQLite, pdo, etc.)
-RUN apt-get update && apt-get install -y libsqlite3-dev && \
+# Instala extensiones necesarias
+RUN apt-get update && apt-get install -y libsqlite3-dev unzip curl && \
     docker-php-ext-install pdo pdo_sqlite
-
 
 # Copia los archivos del proyecto al contenedor
 COPY . /var/www/html/
@@ -13,17 +12,18 @@ COPY . /var/www/html/
 WORKDIR /var/www/html
 
 # Instala Composer
-RUN apt-get update && \
-    apt-get install -y unzip curl && \
-    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+# Permitir ejecutar Composer como root
+ENV COMPOSER_ALLOW_SUPERUSER=1
 
 # Instala dependencias PHP del proyecto
 RUN composer install --no-dev --optimize-autoloader
 
-# Establece permisos de Laravel (storage y bootstrap/cache)
+# Establece permisos para Laravel
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Habilita reescritura de URLs en Apache (necesario para Laravel)
+# Habilita módulo rewrite de Apache
 RUN a2enmod rewrite
 
 # Configura Apache para servir desde /public
@@ -37,4 +37,3 @@ RUN echo '<VirtualHost *:80>\n\
         Require all granted\n\
     </Directory>\n\
 </VirtualHost>' > /etc/apache2/sites-available/000-default.conf
-
