@@ -10,7 +10,8 @@ use App\Http\Controllers\UsuarioController;
 Route::get('usuarios', [UsuarioController::class, 'index']);
 Route::get('usuarios/{id}', [UsuarioController::class, 'show']);
 Route::post('usuarios', [UsuarioController::class, 'store']);
-Route::put('usuarios/{id}', [UsuarioController::class, 'update']); 
+Route::put('usuarios/{id}', [UsuarioController::class, 'update']);
+
 /*
 producto
 */
@@ -19,8 +20,8 @@ use App\Http\Controllers\ProductoController;
 Route::get('productos', [ProductoController::class, 'index']);
 Route::get('productos/{id}', [ProductoController::class, 'show']);
 Route::post('productos', [ProductoController::class, 'store']);
-Route::put('productos/{id}', [ProductoController::class, 'update']);  // PUT
-Route::delete('productos/{id}', [ProductoController::class, 'destroy']);  // DELETE
+Route::put('productos/{id}', [ProductoController::class, 'update']);
+Route::delete('productos/{id}', [ProductoController::class, 'destroy']);
 
 /*
 proveedor
@@ -44,7 +45,7 @@ Route::post('pedidos', [PedidoController::class, 'store']);
 Route::put('pedidos/{id}', [PedidoController::class, 'update']);
 
 /*
-DetallePedidoController
+detalle pedido
 */
 use App\Http\Controllers\DetallePedidoController;
 
@@ -54,10 +55,8 @@ Route::post('detalle-pedido', [DetallePedidoController::class, 'store']);
 Route::put('detalle-pedido/{id}', [DetallePedidoController::class, 'update']);
 Route::delete('detalle-pedido/{id}', [DetallePedidoController::class, 'destroy']);
 
-
-
 /*
-ProductoProveedor
+producto proveedor
 */
 use App\Http\Controllers\ProductoProveedorController;
 
@@ -67,74 +66,74 @@ Route::post('productos_proveedores', [ProductoProveedorController::class, 'store
 Route::put('productos_proveedores/{id}', [ProductoProveedorController::class, 'update']);
 Route::delete('productos_proveedores/{id}', [ProductoProveedorController::class, 'destroy']);
 
-
-
 /*
-RecetaMedica
+receta médica
 */
-
 use App\Http\Controllers\RecetaMedicaController;
 
-Route::get('/recetas_medicas', [RecetaMedicaController::class, 'index']);
-Route::get('/recetas_medicas/{id}', [RecetaMedicaController::class, 'show']);
-Route::post('/recetas_medicas', [RecetaMedicaController::class, 'store']);
-Route::put('/recetas_medicas/{id}', [RecetaMedicaController::class, 'update']);
+Route::get('recetas_medicas', [RecetaMedicaController::class, 'index']);
+Route::get('recetas_medicas/{id}', [RecetaMedicaController::class, 'show']);
+Route::post('recetas_medicas', [RecetaMedicaController::class, 'store']);
+Route::put('recetas_medicas/{id}', [RecetaMedicaController::class, 'update']);
 
 /*
 pago
 */
-
 use App\Http\Controllers\PagoController;
 
-Route::prefix('pagos')->group(function() {
-    Route::get('/', [PagoController::class, 'index']); // Mostrar todos los pagos
-    Route::get('{id}', [PagoController::class, 'show']); // Mostrar pago por ID
-    Route::post('/', [PagoController::class, 'store']); // Crear nuevo pago
-    Route::put('{id}', [PagoController::class, 'update']); // Actualizar pago
+Route::prefix('pagos')->group(function () {
+    Route::get('/', [PagoController::class, 'index']);
+    Route::get('{id}', [PagoController::class, 'show']);
+    Route::post('/', [PagoController::class, 'store']);
+    Route::put('{id}', [PagoController::class, 'update']);
 });
 
 /*
-empresalogistica
+empresa logística
 */
-
 use App\Http\Controllers\EmpresaLogisticaController;
 
-Route::prefix('empresas_logisticas')->group(function() {
-    Route::get('/', [EmpresaLogisticaController::class, 'index']); // Mostrar todas las empresas logísticas
-    Route::get('{id}', [EmpresaLogisticaController::class, 'show']); // Mostrar empresa logística por ID
-    Route::post('/', [EmpresaLogisticaController::class, 'store']); // Crear nueva empresa logística
-    Route::put('{id}', [EmpresaLogisticaController::class, 'update']); // Actualizar empresa logística
-    Route::delete('{id}', [EmpresaLogisticaController::class, 'destroy']); // Eliminar empresa logística
+Route::prefix('empresas_logisticas')->group(function () {
+    Route::get('/', [EmpresaLogisticaController::class, 'index']);
+    Route::get('{id}', [EmpresaLogisticaController::class, 'show']);
+    Route::post('/', [EmpresaLogisticaController::class, 'store']);
+    Route::put('{id}', [EmpresaLogisticaController::class, 'update']);
+    Route::delete('{id}', [EmpresaLogisticaController::class, 'destroy']);
 });
 
 /*
-envio
+envío
 */
-
 use App\Http\Controllers\EnvioController;
 
-
-Route::prefix('envios')->group(function() {
-    Route::get('/', [EnvioController::class, 'index']); // Mostrar todos los envíos
-    Route::get('{id}', [EnvioController::class, 'show']); // Mostrar envío por ID
-    Route::post('/', [EnvioController::class, 'store']); // Crear nuevo envío
-    Route::put('{id}', [EnvioController::class, 'update']); // Actualizar envío
-    Route::delete('{id}', [EnvioController::class, 'destroy']); // Eliminar envío
+Route::prefix('envios')->group(function () {
+    Route::get('/', [EnvioController::class, 'index']);
+    Route::get('{id}', [EnvioController::class, 'show']);
+    Route::post('/', [EnvioController::class, 'store']);
+    Route::put('{id}', [EnvioController::class, 'update']);
+    Route::delete('{id}', [EnvioController::class, 'destroy']);
 });
 
 /*
-atencioncliente
+atención cliente
 */
-
 use App\Http\Controllers\AtencionClienteController;
 
-
-Route::prefix('atencion_cliente')->group(function() {
-    Route::get('/', [AtencionClienteController::class, 'index']); // Mostrar todas las atenciones
-    Route::get('{id}', [AtencionClienteController::class, 'show']); // Mostrar atención por ID
-    Route::post('/', [AtencionClienteController::class, 'store']); // Crear nueva atención
-    Route::put('{id}', [AtencionClienteController::class, 'update']); // Actualizar atención
-    Route::delete('{id}', [AtencionClienteController::class, 'destroy']); // Eliminar atención
+Route::prefix('atencion_cliente')->group(function () {
+    Route::get('/', [AtencionClienteController::class, 'index']);
+    Route::get('{id}', [AtencionClienteController::class, 'show']);
+    Route::post('/', [AtencionClienteController::class, 'store']);
+    Route::put('{id}', [AtencionClienteController::class, 'update']);
+    Route::delete('{id}', [AtencionClienteController::class, 'destroy']);
 });
 
+/*
+ventas
+*/
+use App\Http\Controllers\VentaController;
 
+Route::get('ventas', [VentaController::class, 'index']);
+Route::get('ventas/{id}', [VentaController::class, 'show']);
+Route::post('ventas', [VentaController::class, 'store']);
+Route::put('ventas/{id}', [VentaController::class, 'update']);
+Route::delete('ventas/{id}', [VentaController::class, 'destroy']);

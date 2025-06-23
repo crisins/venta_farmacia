@@ -5,168 +5,103 @@ namespace App\Services;
 use App\Models\Venta;
 use App\Models\DetalleVenta;
 use App\Models\Inventario;
-use App\Services\DetalleVentaService;
+use App\Models\Producto;
 use Illuminate\Support\Facades\DB;
+
 class VentaService
 {
-    protected $detalleVentaService;
-
-    public function __construct(DetalleVentaService $detalleVentaService)
+    public function obtenerVentas()
     {
-        $this->detalleVentaService = $detalleVentaService;
+        return Venta::with('detalles')->orderBy('id', 'desc')->get();
     }
-    #POST
+
     public function registrarVenta(array $data): Venta
     {
-        DB::beginTransaction();
-
-        try {
-            // 1. Crear venta (sin total todavía)
+        return DB::transaction(function () use ($data) {
             $venta = Venta::create([
                 'cliente_id' => $data['cliente_id'],
                 'usuario_id' => $data['usuario_id'],
-                'fecha'      => $data['fecha'],
-                'total'      => 0
+                'fecha' => $data['fecha'],
+                'total' => 0,
             ]);
 
             $total = 0;
+            foreach ($data['productos'] as $detalle) {
+                $producto = Producto::find($detalle['producto_id']);
+                if (!$producto) {
+                    throw new \Exception("Producto no encontrado.");
+                }
 
-            // 2. Crear cada detalle y acumular subtotal
-            foreach ($data['productos'] as $producto) {
-                $detalle = $this->detalleVentaService->crearDetalle([
-                    'venta_id'    => $venta->id,
-                    'producto_id' => $producto['producto_id'],
-                    'cantidad'    => $producto['cantidad'],
+                $inventario = Inventario::where('producto_id', $detalle['producto_id'])->first();
+                if (!$inventario || $inventario->stock_actual < $detalle['cantidad']) {
+                    throw new \Exception("Stock insuficiente para producto ID {$detalle['producto_id']}");
+                }
+
+                $precioUnitario = $producto->precio;
+                $subtotal = $detalle['cantidad'] * $precioUnitario;
+
+                $inventario->stock_actual -= $detalle['cantidad'];
+                $inventario->save();
+
+                DetalleVenta::create([
+                    'venta_id' => $venta->id,
+                    'producto_id' => $detalle['producto_id'],
+                    'cantidad' => $detalle['cantidad'],
+                    'precio_unitario' => $precioUnitario,
+                    'subtotal' => $subtotal,
                 ]);
 
-                $total += $detalle->subtotal;
+                $total += $subtotal;
             }
 
-            // 3. Actualizar total de la venta
             $venta->total = $total;
             $venta->save();
 
-            DB::commit();
-            return $venta;
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            throw $e;
-        }
+            return $venta->fresh(['cliente', 'usuario', 'detalles']);
+        });
     }
-    #GETALL
-    public function obtenerVentas()
-    {
-        return Venta::orderBy('fecha', 'desc')->get();
-    }
-    #GET ID
-    public function obtenerVentaPorId($id)
-    {
-        $venta = Venta::find($id);
 
-        if (!$venta) {
-            throw new \Exception("Venta no encontrada.");
-        }
-
-        return $venta;
-    }
-    #PUT
     public function actualizarVenta($id, array $data): ?Venta
     {
-        $venta = Venta::where('id', $id)->first();
-
-        if (!$venta) {
-            return null;
-        }
-
-        DB::beginTransaction();
-
-        try {
-            // 1. Actualizar datos generales
-            $venta->update([
-                'cliente_id' => $data['cliente_id'],
-                'usuario_id' => $data['usuario_id'],
-                'fecha'      => $data['fecha'],
-            ]);
-
-            $total = 0;
-
-            // 2. Si viene arreglo de productos, reemplazar detalles
-            if (!empty($data['productos'])) {
-                $detallesAnteriores = DetalleVenta::where('venta_id', $venta->id)->get();
-
-                // a) Devolver stock y eliminar detalles
-                foreach ($detallesAnteriores as $detalle) {
-                    $inventario = Inventario::where('producto_id', $detalle->producto_id)->first();
-                    if ($inventario) {
-                        $inventario->stock_actual += $detalle->cantidad;
-                        $inventario->save();
-                    }
-                    $detalle->delete();
-                }
-
-                // b) Crear nuevos detalles
-                foreach ($data['productos'] as $producto) {
-                    $nuevoDetalle = $this->detalleVentaService->crearDetalle([
-                        'venta_id'    => $venta->id,
-                        'producto_id' => $producto['producto_id'],
-                        'cantidad'    => $producto['cantidad'],
-                    ]);
-                    $total += $nuevoDetalle->subtotal;
-                }
-
-                // c) Actualizar total con base en los nuevos detalles
-                $venta->update(['total' => $total]);
+        return DB::transaction(function () use ($id, $data) {
+            $venta = Venta::find($id);
+            if (!$venta) {
+                return null;
             }
 
-            DB::commit();
-            return $venta;
+            $venta->update([
+                'cliente_id' => $data['cliente_id'] ?? $venta->cliente_id,
+                'usuario_id' => $data['usuario_id'] ?? $venta->usuario_id,
+                'fecha' => $data['fecha'] ?? $venta->fecha,
+            ]);
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            throw $e;
-        }
+            // Actualizar detalles (opcional: puedes agregar lógica para actualizar detalles)
+
+            return $venta->fresh('detalles');
+        });
     }
 
-    #DELETE
     public function eliminarVenta($id): bool
     {
+        return DB::transaction(function () use ($id) {
+            $venta = Venta::find($id);
+            if (!$venta) {
+                return false;
+            }
 
-        $venta = Venta::find($id);
-
-        if (!$venta) {
-            return false;
-        }
-
-        DB::beginTransaction();
-
-        try {
-            // Obtener todos los detalles asociados
-            $detalles = DetalleVenta::where('venta_id', $venta->id)->get();
-
-            foreach ($detalles as $detalle) {
-                // Devolver cantidad al inventario
+            // Devolver stock de cada detalle
+            foreach ($venta->detalles as $detalle) {
                 $inventario = Inventario::where('producto_id', $detalle->producto_id)->first();
-
                 if ($inventario) {
                     $inventario->stock_actual += $detalle->cantidad;
                     $inventario->save();
                 }
-
-                // Eliminar el detalle
                 $detalle->delete();
             }
 
-            // Eliminar la venta
             $venta->delete();
 
-            DB::commit();
             return true;
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            throw $e;
-        }
+        });
     }
-
 }

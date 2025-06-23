@@ -12,7 +12,7 @@ class RecetaMedicaFactory extends Factory
             'usuario_id' => \App\Models\Usuario::factory(),
             'archivo_url' => $this->faker->url(),
             'fecha_subida' => $this->faker->dateTimeBetween('-30 days', 'now'),
-            'estado_validación' => $this->faker->randomElement(['pendiente', 'aprobada', 'rechazada']),
+            'estado_validacion' => $this->faker->randomElement(['pendiente', 'aprobada', 'rechazada']),
         ];
     }
 }
