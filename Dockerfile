@@ -25,13 +25,14 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
 RUN a2enmod rewrite
 
 # Configura Apache para servir desde /public
-RUN echo "<VirtualHost *:80>
-    ServerAdmin webmaster@localhost
-    DocumentRoot /var/www/html/public
+RUN echo '<VirtualHost *:80>\n\
+    ServerAdmin webmaster@localhost\n\
+    DocumentRoot /var/www/html/public\n\
+\n\
+    <Directory /var/www/html/public>\n\
+        Options Indexes FollowSymLinks\n\
+        AllowOverride All\n\
+        Require all granted\n\
+    </Directory>\n\
+</VirtualHost>' > /etc/apache2/sites-available/000-default.conf
 
-    <Directory /var/www/html/public>
-        Options Indexes FollowSymLinks
-        AllowOverride All
-        Require all granted
-    </Directory>
-</VirtualHost>" > /etc/apache2/sites-available/000-default.conf
