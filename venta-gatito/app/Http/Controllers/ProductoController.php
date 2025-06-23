@@ -9,27 +9,31 @@ class ProductoController extends Controller
 {
     // Obtener todos los productos
     public function index()
-    {
-        $productos = Producto::all()->map(function ($producto) {
-            return [
-                'id' => $producto->id,
-                'nombre' => $producto->nombre,
-                'descripcion' => $producto->descripcion,
-                'precio' => $producto->precio,
-                'stock' => $producto->stock,
-                'requiere_receta' => $producto->requiere_receta,
-                'estado' => $producto->estado,
-                'fecha_alta' => $producto->fecha_alta,
-            ];
-        });
-        return response()->json($productos);
+{
+    // VERIFICACIÓN TEMPORAL - BORRAR DESPUÉS
+    $debug = [
+        'db_path' => env('DB_DATABASE'),
+        'file_exists' => file_exists(env('DB_DATABASE')),
+    ];
 
-        return response()->json([
-        'base_path' => database_path(),
-        'db_exists' => file_exists(database_path()),
+    $productos = Producto::all()->map(function ($producto) {
+        return [
+            'id' => $producto->id,
+            'nombre' => $producto->nombre,
+            'descripcion' => $producto->descripcion,
+            'precio' => $producto->precio,
+            'stock' => $producto->stock,
+            'requiere_receta' => $producto->requiere_receta,
+            'estado' => $producto->estado,
+            'fecha_alta' => $producto->fecha_alta,
+        ];
+    });
+
+    return response()->json([
+        'debug' => $debug,
+        'productos' => $productos,
     ]);
-        
-    }
+}
 
 
 
