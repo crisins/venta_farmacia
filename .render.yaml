@@ -6,4 +6,6 @@ services:
     branch: main
     dockerfilePath: Dockerfile
     buildCommand: ""
-    startCommand: ""
+    startCommand: |
+      php /var/www/html/venta-gatito/artisan migrate --force && \
+      apache2-foreground

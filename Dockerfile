@@ -23,6 +23,15 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 # Instala las dependencias PHP
 RUN composer install --no-dev --optimize-autoloader
 
+# Borra caché de config y views
+RUN php artisan config:clear && \
+    php artisan route:clear && \
+    php artisan view:clear
+
+# Reestablece permisos
+RUN chmod -R 775 storage bootstrap/cache && \
+    chown -R www-data:www-data storage bootstrap/cache
+
 # Establece permisos necesarios
 RUN chown -R www-data:www-data storage bootstrap/cache
 
