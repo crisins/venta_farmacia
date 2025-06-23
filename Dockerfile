@@ -50,6 +50,6 @@ RUN echo '<VirtualHost *:80>\n\
     </Directory>\n\
 </VirtualHost>' > /etc/apache2/sites-available/000-default.conf
 # Copiar base de datos SQLite al tmp para que sea escribible
-RUN cp /var/www/html/database/database.sqlite /tmp/database.sqlite && \
+RUN cp /var/www/html/venta-gatito/database/database.sqlite /tmp/database.sqlite && \
     chown www-data:www-data /tmp/database.sqlite && \
     chmod 664 /tmp/database.sqlite
